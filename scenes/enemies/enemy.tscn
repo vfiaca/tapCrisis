@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3 uid="uid://muuuvpbbjv2i"]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy.gd" id="1_6xk8f"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2aby3"]
+albedo_color = Color(0.9, 0.1, 0.1, 1)
+metallic = 0.2
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="BoxMesh_enemy"]
+material = SubResource("StandardMaterial3D_2aby3")
+size = Vector3(0.8, 1.5, 0.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_enemy"]
+size = Vector3(0.8, 1.5, 0.8)
+
+[node name="Enemy" type="CharacterBody3D" groups=["enemy"]]
+script = ExtResource("1_6xk8f")
+
+[node name="EnemyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("BoxMesh_enemy")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("BoxShape3D_enemy")

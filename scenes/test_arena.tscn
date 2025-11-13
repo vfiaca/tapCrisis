@@ -1,0 +1,198 @@
+[gd_scene load_steps=12 format=3 uid="uid://25wrdymbdmea"]
+
+[ext_resource type="PackedScene" uid="uid://bfohes30a6o1a" path="res://scenes/core/cover_point.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://cn0hedv0t8tti" path="res://scenes/player/player.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/core/camera_controller.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/core/game_manager.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_simple.tscn" id="5"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(20, 20)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(20, 0.1, 20)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+
+[sub_resource type="Sky" id="Sky_env"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 2
+sky = SubResource("Sky_env")
+ambient_light_source = 3
+
+[node name="TestArena" type="Node3D"]
+
+[node name="GameManager" parent="." node_paths=PackedStringArray("starting_cover") instance=ExtResource("4")]
+transform = Transform3D(0.98761725, 0, -0.15688266, 0, 1, 0, 0.15688266, 0, 0.98761725, -2.5774853, 0, 0.25048837)
+starting_cover = NodePath("../Covers/Cover_Medium_01Start")
+
+[node name="CameraController" parent="GameManager" node_paths=PackedStringArray("start_anchor") instance=ExtResource("3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, 2)
+start_anchor = NodePath("../../Covers/Cover_Medium_01Start/CameraAnchor_Left")
+transition_lead_time = 0.2
+
+[node name="Player" parent="GameManager" node_paths=PackedStringArray("start_anchor") instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.581289, 0, 0.78100395)
+start_anchor = NodePath("../../Covers/Cover_Medium_01Start/PlayerAnchor_Left")
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Enemy01" parent="Enemies" instance=ExtResource("5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0450122, 0, -5.715658)
+
+[node name="Enemy02" parent="Enemies" instance=ExtResource("5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0446825, -4.7683716e-07, -6.6240063)
+mass = 50.0
+gravity_scale = 0.5
+hit_force_multiplier = 100.0
+
+[node name="Enemy03" parent="Enemies" instance=ExtResource("5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.48395, -4.7683716e-07, -7.158115)
+
+[node name="Enemy04" parent="Enemies" instance=ExtResource("5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2164793, -9.536743e-07, -6.5132933)
+
+[node name="Enemy05" parent="Enemies" instance=ExtResource("5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.454728, -9.536743e-07, -6.877922)
+
+[node name="Covers" type="Node3D" parent="."]
+
+[node name="Cover_Medium_01Start" parent="Covers" node_paths=PackedStringArray("right_cover", "forward_cover") instance=ExtResource("1")]
+transform = Transform3D(0.98761725, 0, -0.15688266, 0, 1, 0, 0.15688266, 0, 0.98761725, -5.5403366, 0, -0.22015962)
+cover_name = "Start (Medium)"
+right_cover = NodePath("../Cover_Tall_01Middle")
+forward_cover = NodePath("../Cover_Tall_02Left")
+
+[node name="PlayerAnchor_Left" parent="Covers/Cover_Medium_01Start" index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.48572493)
+
+[node name="PlayerAnchor_Right" parent="Covers/Cover_Medium_01Start" index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.48572493)
+
+[node name="CameraAnchor_Left" parent="Covers/Cover_Medium_01Start" index="3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.9845233, 1.1487005, 3.4983542)
+
+[node name="CameraAnchor_Right" parent="Covers/Cover_Medium_01Start" index="4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9515324, 1.4140139, 2.6476154)
+
+[node name="DebugCamera" parent="Covers/Cover_Medium_01Start" index="5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9515326, 1.4140139, 2.6476157)
+target_side = 1
+
+[node name="Cover_Tall_01Middle" parent="Covers" node_paths=PackedStringArray("left_cover", "right_cover", "forward_cover") instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2853837, 0, -0.26497388)
+height = 1
+cover_name = "Right (Tall)"
+left_cover = NodePath("../Cover_Medium_01Start")
+right_cover = NodePath("../Cover_Tall_01Right")
+forward_cover = NodePath("../Cover_Medium_02Middle")
+
+[node name="PlayerAnchor_Left" parent="Covers/Cover_Tall_01Middle" index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.48572493)
+
+[node name="PlayerAnchor_Right" parent="Covers/Cover_Tall_01Middle" index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.48572493)
+
+[node name="CameraAnchor_Left" parent="Covers/Cover_Tall_01Middle" index="3"]
+transform = Transform3D(0.9489476, 0, 0.31543374, 0, 1, 0, -0.31543374, 0, 0.9489476, -0.5474864, 0.9498434, 1.9627368)
+
+[node name="CameraAnchor_Right" parent="Covers/Cover_Tall_01Middle" index="4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6249394, 1.0902579, 1.9070213)
+
+[node name="DebugCamera" parent="Covers/Cover_Tall_01Middle" index="5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6249394, 1.0902579, 1.9070213)
+target_side = 1
+
+[node name="Cover_Tall_01Right" parent="Covers" node_paths=PackedStringArray("left_cover", "forward_cover") instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.788205, 0, 0.2472899)
+height = 1
+cover_name = "Right (Tall)"
+left_cover = NodePath("../Cover_Tall_01Middle")
+forward_cover = NodePath("../Cover_Medium_02Right")
+
+[node name="PlayerAnchor_Left" parent="Covers/Cover_Tall_01Right" index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.48572493)
+
+[node name="PlayerAnchor_Right" parent="Covers/Cover_Tall_01Right" index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.48572493)
+
+[node name="CameraAnchor_Left" parent="Covers/Cover_Tall_01Right" index="3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4522986, 1.3695073, 2.1203036)
+
+[node name="CameraAnchor_Right" parent="Covers/Cover_Tall_01Right" index="4"]
+transform = Transform3D(0.98326766, -0.02824907, 0.17996325, 0, 0.9879031, 0.15507248, -0.1821669, -0.15247774, 0.97137314, 2.6350722, 2.8821635, 2.497664)
+
+[node name="DebugCamera" parent="Covers/Cover_Tall_01Right" index="5"]
+transform = Transform3D(0.98326766, -0.02824907, 0.17996325, 0, 0.9879031, 0.15507248, -0.1821669, -0.15247774, 0.97137314, 2.6350722, 2.8821635, 2.497664)
+target_side = 1
+
+[node name="Cover_Tall_02Left" parent="Covers" node_paths=PackedStringArray("right_cover", "back_cover") instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.6978636, 0, -6)
+height = 1
+active_sides = 2
+cover_name = "Left (Tall)"
+right_cover = NodePath("../Cover_Medium_02Middle")
+back_cover = NodePath("../Cover_Medium_01Start")
+
+[node name="PlayerAnchor_Left" parent="Covers/Cover_Tall_02Left" index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.5226846)
+
+[node name="PlayerAnchor_Right" parent="Covers/Cover_Tall_02Left" index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.5226846)
+
+[node name="Cover_Medium_02Middle" parent="Covers" node_paths=PackedStringArray("left_cover", "right_cover", "back_cover") instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15279055, 0, -6)
+cover_name = "Forward (Medium)"
+left_cover = NodePath("../Cover_Tall_02Left")
+right_cover = NodePath("../Cover_Medium_02Right")
+back_cover = NodePath("../Cover_Tall_01Middle")
+
+[node name="PlayerAnchor_Left" parent="Covers/Cover_Medium_02Middle" index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.5226846)
+
+[node name="PlayerAnchor_Right" parent="Covers/Cover_Medium_02Middle" index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.5226846)
+
+[node name="Cover_Medium_02Right" parent="Covers" node_paths=PackedStringArray("left_cover", "back_cover") instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.405493, 0, -6)
+active_sides = 1
+cover_name = "Forward (Medium)"
+left_cover = NodePath("../Cover_Medium_02Middle")
+back_cover = NodePath("../Cover_Tall_01Right")
+
+[node name="PlayerAnchor_Left" parent="Covers/Cover_Medium_02Right" index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.5226846)
+
+[node name="PlayerAnchor_Right" parent="Covers/Cover_Medium_02Right" index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.5226846)
+
+[node name="Environment" type="Node3D" parent="."]
+
+[node name="Ground" type="StaticBody3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -6.133497)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Environment/Ground"]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Environment/Ground"]
+shape = SubResource("BoxShape3D_ground")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment"]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 5, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Environment"]
+environment = SubResource("Environment_main")
+
+[editable path="Covers/Cover_Medium_01Start"]
+[editable path="Covers/Cover_Tall_01Middle"]
+[editable path="Covers/Cover_Tall_01Right"]
+[editable path="Covers/Cover_Tall_02Left"]
+[editable path="Covers/Cover_Medium_02Middle"]
+[editable path="Covers/Cover_Medium_02Right"]
