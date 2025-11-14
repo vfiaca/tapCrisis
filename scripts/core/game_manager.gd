@@ -16,6 +16,9 @@ var player: PlayerController = null
 var camera: CameraController = null
 var covers: Array[CoverPoint] = []
 
+# Input state
+var is_transitioning: bool = false  ## Block input during camera/player transitions
+
 func _ready():
 	print("=== Game Manager Starting ===")
 
@@ -59,6 +62,10 @@ func _collect_covers(node: Node):
 
 func _input(event):
 	if not player or not camera:
+		return
+
+	# Block input during transitions
+	if is_transitioning:
 		return
 
 	# Handle touch/mouse for shooting and swiping
@@ -189,20 +196,25 @@ func _handle_swipe_direction(direction: String):
 	if not player.current_cover:
 		return
 
+	# Block further input during transition
+	is_transitioning = true
+
 	# Check if swiping to opposite side of same cover
 	if direction == "left" and player.current_side == "right":
 		if player.current_cover.has_left_side():
 			# Camera leads, player follows after delay
 			camera.transition_to_cover(player.current_cover, "left")
 			await get_tree().create_timer(camera.transition_lead_time).timeout
-			player.rotate_to_side("left")
+			await player.rotate_to_side("left")
+			is_transitioning = false
 			return
 	elif direction == "right" and player.current_side == "left":
 		if player.current_cover.has_right_side():
 			# Camera leads, player follows after delay
 			camera.transition_to_cover(player.current_cover, "right")
 			await get_tree().create_timer(camera.transition_lead_time).timeout
-			player.rotate_to_side("right")
+			await player.rotate_to_side("right")
+			is_transitioning = false
 			return
 
 	# Otherwise, move to connected cover
@@ -215,9 +227,11 @@ func _handle_swipe_direction(direction: String):
 		# Camera leads, player follows after delay
 		camera.transition_to_cover(next_cover, next_side)
 		await get_tree().create_timer(camera.transition_lead_time).timeout
-		player.move_to_cover(next_cover, next_side)
+		await player.move_to_cover(next_cover, next_side)
+		is_transitioning = false
 	else:
 		print("No cover in direction: ", direction)
+		is_transitioning = false
 
 func _determine_entry_side(cover: CoverPoint, from_direction: String) -> String:
 	# Determine entry side based on direction of movement

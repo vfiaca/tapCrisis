@@ -1,6 +1,6 @@
-[gd_scene load_steps=5 format=3 uid="uid://simple_enemy_001"]
+[gd_scene load_steps=5 format=3 uid="uid://hapfownt5725"]
 
-[ext_resource type="Script" path="res://scripts/core/enemy_simple_controller.gd" id="1_enemy"]
+[ext_resource type="Script" uid="uid://184b3eprnvm5" path="res://scripts/core/enemy_simple_controller.gd" id="1_enemy"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
 radius = 0.3
@@ -15,7 +15,9 @@ height = 1.8
 
 [node name="Enemy" type="RigidBody3D" groups=["enemy"]]
 mass = 70.0
+gravity_scale = 0.2
 script = ExtResource("1_enemy")
+hit_force_multiplier = 200.0
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)

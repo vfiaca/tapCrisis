@@ -451,5 +451,444 @@ Each entry should include:
 
 ---
 
-*Last Updated: Session 2 - Animation System Implementation*
-*Next Review: After rigged character integration*
+## Session 3: Shooting System & Gameplay Polish
+
+### Date: [Current Session]
+
+#### Files Created
+- `scripts/core/enemy_simple_controller.gd` - Simple ragdoll enemy
+- `scripts/core/enemy_controller.gd` - Complex skeleton-based enemy (legacy)
+- `scenes/enemies/enemy_simple.tscn` - Simple enemy scene
+- `scenes/enemies/enemy_basic.tscn` - Complex enemy scene (legacy)
+- `scripts/tools/create_cover_path.gd` - Custom path creation tool
+- `docs/custom_paths_guide.md` - Path system documentation
+
+#### Files Modified
+- `scripts/core/player_controller.gd` - Shooting timing overhaul, debug visualization
+- `scripts/core/game_manager.gd` - Shooting flow, input blocking, enemy detection
+- `scripts/core/camera_controller.gd` - FOV transition support
+- `scripts/core/cover_point.gd` - FOV exports, custom path support
+- `scripts/core/cover_camera_debug.gd` - FOV sync with debug camera
+- `scenes/test_arena.tscn` - Added 5 enemy instances
+
+#### Key Features Implemented
+
+##### 1. Debug Raycast Visualization
+- Blue line from player's ShootOrigin to hit point
+- Red sphere at impact location
+- Fades out after 0.5 seconds
+- Uses ImmediateMesh for dynamic line rendering
+- **Code:** `player_controller.gd:276-301` (visualize_shot function)
+
+##### 2. Enemy Ragdoll System
+
+**Simple Enemy (Current Implementation):**
+- Single RigidBody3D with capsule collision
+- States: STANDING (frozen) → RAGDOLL (physics enabled)
+- `freeze = true/false` for state control
+- `apply_impulse()` for hit reactions
+- Mass: 70kg, gravity_scale: 0.2, hit_force_multiplier: 200.0
+- **Files:** `enemy_simple_controller.gd`, `enemy_simple.tscn`
+
+**Complex Enemy (Legacy - Not Active):**
+- Skeleton3D with PhysicalBone3D hierarchy
+- 5 bones: Root, Lower, Middle, Upper, Head
+- Visual meshes reparented to physical bones
+- More realistic but had sync issues
+- Kept for future reference
+- **Files:** `enemy_controller.gd`, `enemy_basic.tscn`
+
+##### 3. Shooting Timing System Refinement
+
+**Export Variables:**
+```gdscript
+@export var step_out_speed: float = 1.0
+@export var shoot_cooldown: float = 0.2
+@export var last_shot_delay: float = 0.3
+@export var step_in_speed: float = 1.0
+```
+
+**Shooting Flow:**
+```
+IF IN COVER:
+  Tap → Step-out animation → First shot fires → is_stepped_out = true
+ELSE (ALREADY OUT):
+  Tap → Shoots immediately
+
+AFTER EACH SHOT:
+  - Reset last_shot_timer (delays step-in)
+  - Start shoot_cooldown (prevents spam)
+
+AUTO STEP-IN:
+  - last_shot_timer counts down in _process()
+  - When reaches 0: _step_back_in() called automatically
+```
+
+**State Tracking:**
+- `is_stepped_out: bool` - Tracks if player is exposed
+- `can_shoot: bool` - Cooldown control
+- `shoot_timer: float` - Cooldown countdown
+- `last_shot_timer: float` - Auto step-in countdown
+
+##### 4. Raycast Authority Split
+
+**Design:**
+- **Camera raycast** determines what was hit (screen-space accuracy)
+- **Player gun position** determines force direction (realistic physics)
+
+**Implementation:**
+- Camera performs hit detection via project_ray_origin/normal
+- Force direction calculated: `(hit_pos - player.shoot_origin.global_position).normalized()`
+- Enemies receive force direction, not hit normal
+- Result: Accurate aiming + realistic ragdoll reactions
+
+**Code Flow:**
+```
+game_manager._handle_tap():
+  1. player.handle_shoot_input() - animation/timing
+  2. camera.project_ray_*() - hit detection
+  3. Calculate force from player gun to hit point
+  4. enemy.take_damage(amount, hit_pos, force_direction, force)
+  5. player.visualize_shot(hit_pos) - debug line
+```
+
+##### 5. Per-Camera FOV Control
+
+**Export Variables:**
+```gdscript
+@export_group("Camera Settings")
+@export var left_fov: float = 75.0
+@export var right_fov: float = 75.0
+```
+
+**Integration:**
+- Added to CoverPoint: `cover_point.gd:15-17`
+- `get_fov(side)` method returns appropriate FOV
+- Camera tweens FOV during transitions: `camera_controller.gd:73-74`
+- Allows cinematic FOV changes per camera position
+
+**Usage:**
+- Select CoverPoint in Inspector
+- Set different FOV values for left/right
+- Camera smoothly transitions FOV when changing sides
+
+##### 6. Input Blocking During Transitions
+
+**Problem:** Spam left/right causes camera jitter, interrupts animations
+
+**Solution:**
+- Added `is_transitioning: bool` flag to game_manager
+- Blocks all input when flag is true
+- Set during cover movements: `game_manager.gd:200`
+- Cleared after animation completes
+- Uses `await` on player movement/rotation functions
+
+**Result:** Smooth, uninterruptible camera transitions
+
+##### 7. Custom Curve Pathing System
+
+**Purpose:** Create cinematic camera paths between covers instead of linear interpolation
+
+**Export Variables (per cover):**
+```gdscript
+@export var left_path: Path3D = null
+@export var right_path: Path3D = null
+@export var forward_path: Path3D = null
+@export var back_path: Path3D = null
+```
+
+**Two Methods to Create Paths:**
+
+**Method 1: Manual (Recommended)**
+1. Add Path3D as child of FROM cover
+2. Edit curve in 3D editor
+3. Assign to cover's path export slot
+
+**Method 2: Tool Script**
+1. Add Node with `create_cover_path.gd` script
+2. Configure: from_cover, to_cover, direction, control points
+3. Enable create_on_ready or call create_path()
+
+**Bezier Control:**
+- `control_point_1_offset: Vector3` - First bezier control (from start)
+- `control_point_2_offset: Vector3` - Second bezier control (from end)
+- Example dramatic sweep: CP1(0,5,-2), CP2(0,5,2)
+- Example tactical low: CP1(0,0.5,-1), CP2(0,0.5,1)
+
+**Documentation:** `docs/custom_paths_guide.md` - Full guide with examples
+
+##### 8. Debug Camera FOV Sync
+
+**Enhancement:** Debug camera tool now syncs FOV
+
+**Apply to Anchor:**
+- Copies camera transform to anchor (position, rotation)
+- Copies FOV to cover's left_fov or right_fov
+- **Code:** `cover_camera_debug.gd:60-64`
+
+**Load from Anchor:**
+- Loads transform from anchor
+- Loads FOV from cover point
+- **Code:** `cover_camera_debug.gd:88-92`
+
+**Workflow:**
+1. Position DebugCamera, adjust FOV
+2. Click "apply_to_anchor"
+3. FOV saved to cover point automatically
+
+#### Issues Resolved
+
+##### Issue 1: Complex Enemy Ragdoll Not Working
+**Problem:** Skeleton3D with PhysicalBone3D didn't activate visually
+- Logs showed correct function calls
+- Physics simulation started
+- Visual meshes didn't follow bones
+
+**Attempted Fixes:**
+- Changed from `simulate_physics` property to `physical_bones_start_simulation()`
+- Reparented visual meshes to physical bones
+- Still unreliable
+
+**Final Solution:**
+- Simplified to single RigidBody3D enemy
+- Much more reliable and performant
+- Kept complex system for future reference
+
+##### Issue 2: Debug Raycast Wrong Direction
+**Problem:** ImmediateMesh vertices in wrong coordinate space
+
+**Solution:**
+- Convert world positions to local space of debug_line
+- Use `debug_line.to_local(world_pos)`
+- **Fix:** `player_controller.gd:273-278`
+
+##### Issue 3: Input Spam Causes Camera Jitter
+**Problem:** Rapid swipe input interrupted transitions
+
+**Solution:**
+- Added is_transitioning flag
+- Block input during transitions
+- Await animation completion before unlocking
+- **Fix:** `game_manager.gd:67-69, 200-234`
+
+##### Issue 4: get_path() Name Conflict
+**Problem:** `get_path()` overrides Node native method
+
+**Solution:**
+- Renamed to `get_custom_path()`
+- **Fix:** `cover_point.gd:92`
+
+#### Design Decisions
+
+##### 1. Simple vs Complex Enemy
+**Decision:** Use simple RigidBody3D enemy
+**Rationale:**
+- More reliable physics behavior
+- Better performance
+- Easier to tune (mass, gravity, force multiplier)
+- Complex skeleton system kept for future reference
+
+##### 2. Camera vs Player Raycast Authority
+**Decision:** Split responsibility
+- Camera determines WHAT was hit (accuracy)
+- Player gun determines force DIRECTION (realism)
+
+**Rationale:**
+- Best of both worlds
+- Screen-space aiming feels accurate
+- Ragdoll reactions look realistic
+- Future-proof for weapon variety
+
+##### 3. Path System Flexibility
+**Decision:** Optional Path3D references, manual creation preferred
+
+**Rationale:**
+- Manual editing gives maximum control
+- Tool script for quick prototyping
+- Falls back to linear if no path defined
+- No code changes needed for level design
+
+##### 4. Input Blocking vs Queuing
+**Decision:** Block input during transitions
+
+**Rationale:**
+- Prevents animation interruption
+- Simpler than input queue system
+- Matches Time Crisis feel (deliberate movement)
+- Can add queuing later if needed
+
+#### Technical Improvements
+
+##### Animation System
+- Auto step-in based on timer (no explicit input needed)
+- Separate speed controls for step-out vs step-in
+- `is_stepped_out` state for conditional shooting
+
+##### Physics System
+- Force direction from gun position (not hit normal)
+- Adjustable gravity_scale per enemy
+- High hit_force_multiplier (200.0) for dramatic reactions
+
+##### Camera System
+- FOV transitions smoothly via Tween
+- Per-anchor FOV control
+- Debug camera syncs FOV automatically
+
+##### Input System
+- Transition blocking prevents jitter
+- Await-based sequencing (camera → player)
+- Clean state management
+
+#### Code Quality Notes
+
+**Player Controller:**
+- Clear separation: handle_shoot_input() vs visualize_shot()
+- Timer-based auto behaviors (_process updates)
+- Export variables for designer control
+
+**Game Manager:**
+- Await-based sequencing (readable async flow)
+- is_transitioning flag prevents race conditions
+- Enemy detection walks parent hierarchy
+
+**Enemy Controller:**
+- Simple state machine (STANDING → RAGDOLL)
+- One-way transition (can't un-ragdoll)
+- Force application considers offset for torque
+
+#### Testing Notes
+
+**Enemy Hit Testing:**
+```
+1. Run test_arena.tscn
+2. Tap on enemy
+3. Observe:
+   - Blue raycast line from player to enemy
+   - Red sphere at hit point
+   - Enemy unfreezes and ragdolls
+   - Force direction from player gun position
+```
+
+**Camera Transition Testing:**
+```
+1. Spam left/right swipes during transition
+2. Observe:
+   - Input blocked (no jitter)
+   - Transition completes smoothly
+   - Input re-enabled after completion
+```
+
+**FOV Transition Testing:**
+```
+1. Set different left_fov and right_fov on a cover
+2. Swipe to change sides
+3. Observe smooth FOV transition
+```
+
+**Custom Path Testing:**
+```
+1. Create Path3D under a cover
+2. Draw curve to another cover
+3. Assign to forward_path
+4. Swipe forward
+5. Camera should follow curve (when implemented)
+```
+
+#### Performance Considerations
+
+- ImmediateMesh created per shot (cleaned up after 0.5s)
+- Simple enemy physics (single rigid body)
+- Tween system reuses single active_tween
+- No per-frame raycasting
+- Path curves pre-baked by Godot
+
+#### Known Limitations
+
+**Current Implementation:**
+- Custom paths not yet integrated with camera movement
+- Only one enemy type (simple capsule)
+- No enemy health system (one-hit kill)
+- No damage to player
+- No weapon variety
+
+**Future Improvements:**
+- Integrate Path3D curves with camera transitions
+- Multiple enemy types with different physics
+- Enemy health/armor system
+- Player health and damage
+- Different weapons with unique behaviors
+
+---
+
+## Technical Debt / Known Issues (Updated)
+
+### Current Limitations
+1. **Placeholder Visuals**
+   - Using simple capsule mesh for player and enemies
+   - No rigged character or animations yet
+   - No weapon model
+   - Debug raycast visualization (not final art)
+
+2. **Missing Features**
+   - Custom paths defined but not integrated with camera
+   - No enemy AI or targeting
+   - No player damage/health system
+   - No UI (health, ammo, crosshair)
+   - No weapon firing VFX/SFX (only debug line)
+   - No hit VFX on enemies
+
+3. **Input Limitations**
+   - Basic swipe detection (no diagonal movement)
+   - No input buffering/queuing
+   - No gesture customization
+
+4. **Enemy Limitations**
+   - One-hit kill (no health)
+   - No AI behavior
+   - Simple physics only
+   - No enemy types/variety
+
+### Performance Notes (Updated)
+- Simple enemy physics very efficient
+- Debug visualization temporary (will be VFX)
+- Path curves pre-baked by engine
+- Single tween instance reused
+
+---
+
+## Next Session TODO (Updated)
+
+### High Priority
+1. **Integrate Custom Paths with Camera**
+   - Modify camera_controller to follow Path3D curves
+   - PathFollow3D or manual curve sampling
+   - Maintain rotation control from anchors
+
+2. **Enemy AI System**
+   - Pop up from cover
+   - Aim at player
+   - Shoot with delay
+   - Return to cover
+
+3. **Player Health/Damage**
+   - Take damage from enemy shots
+   - Health system
+   - Death state
+
+### Medium Priority
+4. Create UI system (health, ammo, crosshair)
+5. Add shooting VFX (muzzle flash, bullet tracer, impact)
+6. Implement weapon variety (pistol, rifle, shotgun)
+7. Enemy health system (multi-hit enemies)
+8. Hit feedback improvements (screen shake, hit markers)
+
+### Low Priority
+9. Polish animation transitions
+10. Add audio (shots, impacts, ambient)
+11. Level progression system
+12. Mobile build optimization
+
+---
+
+*Last Updated: Session 3 - Shooting System & Gameplay Polish*
+*Next Review: After custom path camera integration*

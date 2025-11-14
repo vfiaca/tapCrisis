@@ -57,9 +57,16 @@ func _apply_to_anchor():
 	# Copy this camera's transform to the anchor
 	anchor.global_transform = global_transform
 
+	# Copy FOV to cover point
+	if target_side == TargetSide.LEFT:
+		cover_point.left_fov = fov
+	else:
+		cover_point.right_fov = fov
+
 	print("✓ Applied camera transform to ", anchor_name)
 	print("  Position: ", global_position)
 	print("  Rotation: ", global_rotation_degrees)
+	print("  FOV: ", fov)
 
 ## Load anchor transform to this camera
 func _update_from_anchor():
@@ -77,4 +84,12 @@ func _update_from_anchor():
 
 	if anchor:
 		global_transform = anchor.global_transform
+
+		# Load FOV from cover point
+		if target_side == TargetSide.LEFT:
+			fov = cover_point.left_fov
+		else:
+			fov = cover_point.right_fov
+
 		print("↻ Loaded transform from ", anchor_name)
+		print("  FOV: ", fov)

@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://cn0hedv0t8tti" path="res://scenes/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/core/camera_controller.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/core/game_manager.tscn" id="4"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/enemy_simple.tscn" id="5"]
+[ext_resource type="PackedScene" uid="uid://hapfownt5725" path="res://scenes/enemies/enemy_simple.tscn" id="5"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(20, 20)
@@ -33,6 +33,8 @@ starting_cover = NodePath("../Covers/Cover_Medium_01Start")
 
 [node name="CameraController" parent="GameManager" node_paths=PackedStringArray("start_anchor") instance=ExtResource("3")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, 2)
+keep_aspect = 0
+fov = 70.0
 start_anchor = NodePath("../../Covers/Cover_Medium_01Start/CameraAnchor_Left")
 transition_lead_time = 0.2
 
@@ -47,9 +49,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0450122, 0, -5.715658)
 
 [node name="Enemy02" parent="Enemies" instance=ExtResource("5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0446825, -4.7683716e-07, -6.6240063)
-mass = 50.0
-gravity_scale = 0.5
-hit_force_multiplier = 100.0
 
 [node name="Enemy03" parent="Enemies" instance=ExtResource("5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.48395, -4.7683716e-07, -7.158115)
@@ -65,6 +64,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.454728, -9.536743e-07, -6.8
 [node name="Cover_Medium_01Start" parent="Covers" node_paths=PackedStringArray("right_cover", "forward_cover") instance=ExtResource("1")]
 transform = Transform3D(0.98761725, 0, -0.15688266, 0, 1, 0, 0.15688266, 0, 0.98761725, -5.5403366, 0, -0.22015962)
 cover_name = "Start (Medium)"
+left_fov = null
+right_fov = null
 right_cover = NodePath("../Cover_Tall_01Middle")
 forward_cover = NodePath("../Cover_Tall_02Left")
 
@@ -75,19 +76,23 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.48572493)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.48572493)
 
 [node name="CameraAnchor_Left" parent="Covers/Cover_Medium_01Start" index="3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.9845233, 1.1487005, 3.4983542)
+transform = Transform3D(0.9940145, 0, 0.10924855, 0, 1, 0, -0.10924855, 0, 0.9940145, -1.381134, 2.2074547, 2.4053557)
 
 [node name="CameraAnchor_Right" parent="Covers/Cover_Medium_01Start" index="4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9515324, 1.4140139, 2.6476154)
+transform = Transform3D(0.9988075, -0.009170193, 0.047955535, 0.0063757123, 0.99829024, 0.058103953, -0.048406355, -0.05772891, 0.9971581, 2.1005802, 1.7769878, 3.5593874)
 
 [node name="DebugCamera" parent="Covers/Cover_Medium_01Start" index="5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9515326, 1.4140139, 2.6476157)
+transform = Transform3D(0.99880755, -0.009170192, 0.047955535, 0.0063757123, 0.99829024, 0.058103953, -0.048406355, -0.05772891, 0.99715817, 2.1005802, 1.7769878, 3.5593874)
+keep_aspect = 0
+fov = 70.0
 target_side = 1
 
 [node name="Cover_Tall_01Middle" parent="Covers" node_paths=PackedStringArray("left_cover", "right_cover", "forward_cover") instance=ExtResource("1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2853837, 0, -0.26497388)
 height = 1
 cover_name = "Right (Tall)"
+left_fov = 76.6
+right_fov = 90.6
 left_cover = NodePath("../Cover_Medium_01Start")
 right_cover = NodePath("../Cover_Tall_01Right")
 forward_cover = NodePath("../Cover_Medium_02Middle")
@@ -99,19 +104,22 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4000001, 0, 0.48572493)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.48572493)
 
 [node name="CameraAnchor_Left" parent="Covers/Cover_Tall_01Middle" index="3"]
-transform = Transform3D(0.9489476, 0, 0.31543374, 0, 1, 0, -0.31543374, 0, 0.9489476, -0.5474864, 0.9498434, 1.9627368)
+transform = Transform3D(0.9489476, 0, 0.31543374, 0, 1, 0, -0.31543374, 0, 0.9489476, -0.6571336, 2.0508032, 2.1640573)
 
 [node name="CameraAnchor_Right" parent="Covers/Cover_Tall_01Middle" index="4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6249394, 1.0902579, 1.9070213)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5619445, 1.0902579, 2.9972465)
 
 [node name="DebugCamera" parent="Covers/Cover_Tall_01Middle" index="5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6249394, 1.0902579, 1.9070213)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5619445, 1.0902579, 2.9972465)
+fov = 90.6
 target_side = 1
 
 [node name="Cover_Tall_01Right" parent="Covers" node_paths=PackedStringArray("left_cover", "forward_cover") instance=ExtResource("1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.788205, 0, 0.2472899)
 height = 1
 cover_name = "Right (Tall)"
+left_fov = null
+right_fov = null
 left_cover = NodePath("../Cover_Tall_01Middle")
 forward_cover = NodePath("../Cover_Medium_02Right")
 
@@ -136,6 +144,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.6978636, 0, -6)
 height = 1
 active_sides = 2
 cover_name = "Left (Tall)"
+left_fov = null
+right_fov = null
 right_cover = NodePath("../Cover_Medium_02Middle")
 back_cover = NodePath("../Cover_Medium_01Start")
 
@@ -148,6 +158,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.5226846)
 [node name="Cover_Medium_02Middle" parent="Covers" node_paths=PackedStringArray("left_cover", "right_cover", "back_cover") instance=ExtResource("1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15279055, 0, -6)
 cover_name = "Forward (Medium)"
+left_fov = null
+right_fov = null
 left_cover = NodePath("../Cover_Tall_02Left")
 right_cover = NodePath("../Cover_Medium_02Right")
 back_cover = NodePath("../Cover_Tall_01Middle")
@@ -162,6 +174,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.5226846)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.405493, 0, -6)
 active_sides = 1
 cover_name = "Forward (Medium)"
+left_fov = null
+right_fov = null
 left_cover = NodePath("../Cover_Medium_02Middle")
 back_cover = NodePath("../Cover_Tall_01Right")
 

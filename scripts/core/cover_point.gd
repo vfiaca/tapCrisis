@@ -12,11 +12,21 @@ enum CoverHeight { MEDIUM, TALL }
 @export_flags("Left:1", "Right:2") var active_sides: int = 3  # Both sides by default
 @export var cover_name: String = ""  # For debugging
 
+@export_group("Camera Settings")
+@export var left_fov: float = 75.0  ## FOV for left camera anchor
+@export var right_fov: float = 75.0  ## FOV for right camera anchor
+
 @export_group("Connections")
 @export var left_cover: CoverPoint = null
 @export var right_cover: CoverPoint = null
 @export var forward_cover: CoverPoint = null
 @export var back_cover: CoverPoint = null
+
+@export_group("Custom Paths (Optional)")
+@export var left_path: Path3D = null  ## Custom curve path to left cover
+@export var right_path: Path3D = null  ## Custom curve path to right cover
+@export var forward_path: Path3D = null  ## Custom curve path to forward cover
+@export var back_path: Path3D = null  ## Custom curve path to back cover
 
 # Child nodes (set in _ready)
 var player_anchor_left: Marker3D
@@ -56,6 +66,13 @@ func get_camera_anchor(side: String) -> Marker3D:
 		"right": return camera_anchor_right
 	return null
 
+## Get FOV for specified side
+func get_fov(side: String) -> float:
+	match side:
+		"left": return left_fov
+		"right": return right_fov
+	return 75.0  # Default fallback
+
 ## Get animation ID for this cover configuration
 func get_animation_id(side: String) -> String:
 	var height_str = "Medium" if height == CoverHeight.MEDIUM else "Tall"
@@ -69,6 +86,15 @@ func get_connection(direction: String) -> CoverPoint:
 		"right": return right_cover
 		"forward": return forward_cover
 		"back": return back_cover
+	return null
+
+## Get custom path in specified direction (optional)
+func get_custom_path(direction: String) -> Path3D:
+	match direction:
+		"left": return left_path
+		"right": return right_path
+		"forward": return forward_path
+		"back": return back_path
 	return null
 
 ## Debug info

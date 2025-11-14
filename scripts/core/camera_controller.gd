@@ -54,6 +54,7 @@ func transition_to_cover(cover: CoverPoint, side: String):
 	# Cache target position and rotation
 	var target_position = cam_anchor.global_position
 	var target_rotation = cam_anchor.global_rotation
+	var target_fov = cover.get_fov(side)
 
 	# Cancel existing tween
 	if active_tween and active_tween.is_running():
@@ -69,6 +70,8 @@ func transition_to_cover(cover: CoverPoint, side: String):
 		target_position, transition_duration)
 	active_tween.tween_property(self, "global_rotation",
 		target_rotation, transition_duration)
+	active_tween.tween_property(self, "fov",
+		target_fov, transition_duration)
 
 ## Handle tap/click - raycast from screen position
 func handle_tap(screen_pos: Vector2) -> Dictionary:
