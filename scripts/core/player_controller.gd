@@ -87,8 +87,8 @@ func _process(delta: float):
 			is_moving = false
 			global_position = move_target_pos  # Snap to final position
 
-## Move to a new cover
-func move_to_cover(target_cover: CoverPoint, target_side: String):
+## Move to a new cover (optionally following a custom path)
+func move_to_cover(target_cover: CoverPoint, target_side: String, custom_path: Path3D = null):
 	if not target_cover:
 		return
 
@@ -103,23 +103,73 @@ func move_to_cover(target_cover: CoverPoint, target_side: String):
 
 	print("Transitioning: ", from_id, " → ", to_id)
 
+	# Use CoverPoint's player movement duration (overrides default)
+	var duration = target_cover.player_movement_duration if target_cover.player_movement_duration > 0 else movement_duration
+
 	# Get target position
 	var anchor = target_cover.get_player_anchor(target_side)
 	if anchor:
-		# Start smooth movement
-		move_start_pos = global_position
-		move_target_pos = anchor.global_position
-		move_progress = 0.0
-		is_moving = true
+		var target_pos = anchor.global_position
 
-		# Wait for movement to complete
-		var duration = movement_duration
-		await get_tree().create_timer(duration).timeout
+		# If custom path is provided and has a valid curve, follow it
+		if custom_path and custom_path.curve and custom_path.curve.point_count >= 2:
+			await _follow_path(custom_path, target_pos, duration)
+		else:
+			# Default: smooth linear movement
+			move_start_pos = global_position
+			move_target_pos = target_pos
+			move_progress = 0.0
+			is_moving = true
+
+			# Wait for movement to complete
+			await get_tree().create_timer(duration).timeout
 
 	# Update state
 	current_cover = target_cover
 	current_side = target_side
 	current_state = State.IN_COVER
+
+## Follow a Path3D curve to the destination
+func _follow_path(path: Path3D, target_position: Vector3, duration: float = -1):
+	var curve = path.curve
+	var curve_length = curve.get_baked_length()
+
+	# Use provided duration or fall back to default
+	var move_duration = duration if duration > 0 else movement_duration
+
+	if curve_length <= 0:
+		push_warning("Player path curve has zero length, using linear movement")
+		# Fallback to linear
+		move_start_pos = global_position
+		move_target_pos = target_position
+		move_progress = 0.0
+		is_moving = true
+		await get_tree().create_timer(move_duration).timeout
+		return
+
+	print("Player following custom path: ", path.name, " (length: ", curve_length, ", duration: ", move_duration, "s)")
+
+	# Disable lerp-based movement, we'll move manually along path
+	is_moving = false
+
+	# Sample along the curve over time
+	var elapsed = 0.0
+	while elapsed < move_duration:
+		var t = elapsed / move_duration
+		# Apply easing
+		t = ease(t, -2.0)  # Cubic ease in-out
+
+		# Sample position from curve
+		var sampled_pos = curve.sample_baked(t * curve_length)
+		# Convert from path's local space to world space
+		global_position = path.to_global(sampled_pos)
+
+		# Wait one frame
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+
+	# Snap to final position
+	global_position = target_position
 
 ## Rotate to opposite side of same cover
 func rotate_to_side(new_side: String):

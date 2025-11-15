@@ -202,16 +202,16 @@ func _handle_swipe_direction(direction: String):
 	# Check if swiping to opposite side of same cover
 	if direction == "left" and player.current_side == "right":
 		if player.current_cover.has_left_side():
-			# Camera leads, player follows after delay
-			camera.transition_to_cover(player.current_cover, "left")
+			# No custom path for same-cover side switches
+			camera.transition_to_cover(player.current_cover, "left", null)
 			await get_tree().create_timer(camera.transition_lead_time).timeout
 			await player.rotate_to_side("left")
 			is_transitioning = false
 			return
 	elif direction == "right" and player.current_side == "left":
 		if player.current_cover.has_right_side():
-			# Camera leads, player follows after delay
-			camera.transition_to_cover(player.current_cover, "right")
+			# No custom path for same-cover side switches
+			camera.transition_to_cover(player.current_cover, "right", null)
 			await get_tree().create_timer(camera.transition_lead_time).timeout
 			await player.rotate_to_side("right")
 			is_transitioning = false
@@ -224,10 +224,25 @@ func _handle_swipe_direction(direction: String):
 		# Determine which side to enter from
 		var next_side = _determine_entry_side(next_cover, direction)
 
-		# Camera leads, player follows after delay
-		camera.transition_to_cover(next_cover, next_side)
+		# Check for custom paths for this direction
+		# For forward/back, look for side-specific paths first
+		var camera_path = _get_path_for_direction(player.current_cover, direction, "camera", player.current_side)
+		var player_path = _get_path_for_direction(player.current_cover, direction, "player", player.current_side)
+
+		if camera_path:
+			print("Using custom camera path for ", direction, ": ", camera_path.name)
+		else:
+			print("No camera path - using linear camera transition")
+
+		if player_path:
+			print("Using custom player path for ", direction, ": ", player_path.name)
+		else:
+			print("No player path - player will snap to position")
+
+		# Camera and player move together (camera leads slightly)
+		camera.transition_to_cover(next_cover, next_side, camera_path)
 		await get_tree().create_timer(camera.transition_lead_time).timeout
-		await player.move_to_cover(next_cover, next_side)
+		await player.move_to_cover(next_cover, next_side, player_path)
 		is_transitioning = false
 	else:
 		print("No cover in direction: ", direction)
@@ -263,3 +278,32 @@ func _determine_entry_side(cover: CoverPoint, from_direction: String) -> String:
 
 	# Fallback
 	return "left"
+
+## Get path for a direction, checking for side-specific paths first
+func _get_path_for_direction(cover: CoverPoint, direction: String, path_type: String, current_side: String) -> Path3D:
+	# For all movements, check for side-specific path first
+	# e.g., "Path_Forward_Camera_Left", "Path_Right_Player_Right", etc.
+	var side_specific_name = "Path_" + direction.capitalize() + "_" + path_type.capitalize() + "_" + current_side.capitalize()
+	var side_specific_path = cover.get_node_or_null(side_specific_name)
+
+	if side_specific_path and side_specific_path is Path3D:
+		return side_specific_path
+
+	# Fall back to generic path (from export properties or generic child node)
+	# First try the export property
+	var generic_path = null
+	if path_type == "camera":
+		generic_path = cover.get_camera_path(direction)
+	else:
+		generic_path = cover.get_player_path(direction)
+
+	if generic_path:
+		return generic_path
+
+	# Finally, try finding a generic path node
+	var generic_name = "Path_" + direction.capitalize() + "_" + path_type.capitalize()
+	var generic_node = cover.get_node_or_null(generic_name)
+	if generic_node and generic_node is Path3D:
+		return generic_node
+
+	return null

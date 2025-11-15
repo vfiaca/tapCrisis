@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(godot --headless --script addons/path_creator/plugin.gd:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

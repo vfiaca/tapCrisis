@@ -3,15 +3,22 @@ extends Node
 
 ## Tool for creating custom curve paths between cover points
 ##
-## HOW TO USE:
-## 1. Add this script as a child node in your scene
-## 2. Configure the settings in the Inspector
-## 3. Call create_path() from the debugger or add a button in editor
+## RECOMMENDED WORKFLOW (use the Editor Plugin instead):
+## 1. Enable "Cover Path Tools" plugin in Project Settings → Plugins
+## 2. Select a CoverPoint node
+## 3. Use the "Path Creation Tools" buttons in the Inspector
 ##
-## OR simply:
+## ALTERNATIVE - Manual Tool Script:
+## 1. Add this script as a child node in your scene
+## 2. Configure from_cover, to_cover, and direction
+## 3. Click "Create Path" button in Inspector (appears in editor)
+## 4. Adjust curve settings if needed
+## 5. Click "Create Path" again to update
+##
+## OR FULLY MANUAL:
 ## - Create a Path3D node as child of the FROM cover
 ## - Name it appropriately (e.g., "Path_Forward")
-## - Assign it to the cover's path export variable (e.g., forward_path)
+## - Assign it to the cover's path export variable
 ## - Edit the curve in the 3D editor
 
 @export_group("Path Configuration")
@@ -22,11 +29,46 @@ extends Node
 @export_group("Curve Settings")
 @export var control_point_1_offset: Vector3 = Vector3(0, 3, -3)  ## First bezier control (from start)
 @export var control_point_2_offset: Vector3 = Vector3(0, 3, 3)  ## Second bezier control (from end)
-@export var create_on_ready: bool = false  ## Auto-create path when node enters tree
+
+@export_group("Advanced")
+@export var auto_calculate_offsets: bool = true  ## Calculate offsets based on distance
+@export var path_style: PathStyle = PathStyle.GENTLE_ARC  ## Predefined path styles
+@export var create_on_ready: bool = false  ## DEPRECATED: Use editor plugin instead
+
+enum PathStyle {
+	GENTLE_ARC,       ## Gentle overhead arc (default)
+	LOW_TACTICAL,     ## Stay low and close
+	DRAMATIC_SWEEP,   ## High cinematic sweep
+	CUSTOM            ## Use manual control_point offsets
+}
 
 func _ready():
 	if Engine.is_editor_hint() and create_on_ready:
+		push_warning("create_on_ready is deprecated. Use the Cover Path Tools plugin or click 'Create Path' button instead.")
 		create_path()
+
+## Get property list for editor buttons
+func _get_property_list():
+	var properties = []
+
+	# Add button to create/update path in editor
+	if Engine.is_editor_hint():
+		properties.append({
+			"name": "create_or_update_path",
+			"type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_EDITOR,
+			"hint": PROPERTY_HINT_NONE,
+			"hint_string": "Create Path"
+		})
+
+	return properties
+
+## Handle property changes (button clicks)
+func _set(property: StringName, value) -> bool:
+	if property == "create_or_update_path" and value:
+		create_path()
+		return true
+	return false
 
 ## Create the custom path between covers
 func create_path():
@@ -39,6 +81,16 @@ func create_path():
 		return null
 
 	print("Creating custom path from ", from_cover.name, " to ", to_cover.name, " (direction: ", direction, ")")
+
+	# Calculate offsets based on style
+	var final_cp1_offset = control_point_1_offset
+	var final_cp2_offset = control_point_2_offset
+
+	if auto_calculate_offsets and path_style != PathStyle.CUSTOM:
+		var offsets = _calculate_style_offsets()
+		final_cp1_offset = offsets[0]
+		final_cp2_offset = offsets[1]
+		print("  Using ", PathStyle.keys()[path_style], " style offsets")
 
 	# Get or create Path3D node
 	var path_name = "Path_" + direction.capitalize()
@@ -67,8 +119,8 @@ func create_path():
 	var end_local = path_node.to_local(end_world)
 
 	# Control points (offsets are in world space)
-	var cp1_world = start_world + control_point_1_offset
-	var cp2_world = end_world + control_point_2_offset
+	var cp1_world = start_world + final_cp1_offset
+	var cp2_world = end_world + final_cp2_offset
 
 	var cp1_local = path_node.to_local(cp1_world)
 	var cp2_local = path_node.to_local(cp2_world)
@@ -96,3 +148,40 @@ func create_path():
 	print("  Curve length: ", curve.get_baked_length())
 
 	return path_node
+
+## Calculate control point offsets based on path style
+func _calculate_style_offsets() -> Array:
+	var distance = from_cover.global_position.distance_to(to_cover.global_position)
+
+	var cp1: Vector3
+	var cp2: Vector3
+
+	match path_style:
+		PathStyle.GENTLE_ARC:
+			# Gentle overhead arc
+			var height = min(distance * 0.3, 3.0)
+			var depth = distance * 0.2
+			cp1 = Vector3(0, height, -depth)
+			cp2 = Vector3(0, height, depth)
+
+		PathStyle.LOW_TACTICAL:
+			# Stay low and close
+			var height = 0.5
+			var depth = distance * 0.15
+			cp1 = Vector3(0, height, -depth)
+			cp2 = Vector3(0, height, depth)
+
+		PathStyle.DRAMATIC_SWEEP:
+			# High cinematic sweep
+			var height = min(distance * 0.5, 6.0)
+			var depth = distance * 0.3
+			var side = distance * 0.2
+			cp1 = Vector3(-side, height, -depth)
+			cp2 = Vector3(side, height, depth)
+
+		PathStyle.CUSTOM:
+			# Use manual offsets
+			cp1 = control_point_1_offset
+			cp2 = control_point_2_offset
+
+	return [cp1, cp2]

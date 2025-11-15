@@ -36,8 +36,8 @@ func _ready():
 func set_player(p: Node3D):
 	player = p
 
-## Transition camera to new cover position
-func transition_to_cover(cover: CoverPoint, side: String):
+## Transition camera to new cover position (optionally following a custom path)
+func transition_to_cover(cover: CoverPoint, side: String, custom_path: Path3D = null):
 	if not cover:
 		return
 
@@ -56,22 +56,77 @@ func transition_to_cover(cover: CoverPoint, side: String):
 	var target_rotation = cam_anchor.global_rotation
 	var target_fov = cover.get_fov(side)
 
+	# Use CoverPoint's camera transition duration (overrides default)
+	var duration = cover.camera_transition_duration if cover.camera_transition_duration > 0 else transition_duration
+	var ease_type = cover.transition_ease_type if cover.transition_ease_type else transition_ease
+
 	# Cancel existing tween
 	if active_tween and active_tween.is_running():
 		active_tween.kill()
 
-	# Camera starts moving immediately (no wait)
+	# If custom path is provided and has a valid curve, follow it
+	if custom_path and custom_path.curve and custom_path.curve.point_count >= 2:
+		_follow_path(custom_path, target_position, target_rotation, target_fov, duration, ease_type)
+	else:
+		# Default: linear interpolation
+		_linear_transition(target_position, target_rotation, target_fov, duration, ease_type)
+
+## Follow a Path3D curve to the destination
+func _follow_path(path: Path3D, target_position: Vector3, target_rotation: Vector3, target_fov: float, duration: float = -1, ease: Tween.EaseType = -1):
+	var curve = path.curve
+	var curve_length = curve.get_baked_length()
+
+	# Use provided duration or fall back to default
+	var tween_duration = duration if duration > 0 else transition_duration
+	var tween_ease = ease if ease >= 0 else transition_ease
+
+	if curve_length <= 0:
+		push_warning("Path curve has zero length, falling back to linear transition")
+		_linear_transition(target_position, target_rotation, target_fov, duration, ease)
+		return
+
+	print("Following custom path: ", path.name, " (length: ", curve_length, ", duration: ", tween_duration, "s)")
+
+	# Create tween for path following
+	active_tween = create_tween()
+	active_tween.set_ease(tween_ease)
+	active_tween.set_trans(transition_trans)
+
+	# Position follows curve
+	active_tween.tween_method(
+		func(t: float):
+			# Sample position from curve
+			var sampled_pos = curve.sample_baked(t * curve_length)
+			# Convert from path's local space to world space
+			global_position = path.to_global(sampled_pos)
+
+			# Interpolate rotation separately (not from curve)
+			global_rotation = global_rotation.lerp(target_rotation, t),
+		0.0,
+		1.0,
+		tween_duration
+	)
+
+	# FOV tweens separately in parallel
+	active_tween.parallel().tween_property(self, "fov", target_fov, tween_duration)
+
+## Linear transition (no path)
+func _linear_transition(target_position: Vector3, target_rotation: Vector3, target_fov: float, duration: float = -1, ease: Tween.EaseType = -1):
+	# Use provided duration or fall back to default
+	var tween_duration = duration if duration > 0 else transition_duration
+	var tween_ease = ease if ease >= 0 else transition_ease
+
 	active_tween = create_tween()
 	active_tween.set_parallel(true)
-	active_tween.set_ease(transition_ease)
+	active_tween.set_ease(tween_ease)
 	active_tween.set_trans(transition_trans)
 
 	active_tween.tween_property(self, "global_position",
-		target_position, transition_duration)
+		target_position, tween_duration)
 	active_tween.tween_property(self, "global_rotation",
-		target_rotation, transition_duration)
+		target_rotation, tween_duration)
 	active_tween.tween_property(self, "fov",
-		target_fov, transition_duration)
+		target_fov, tween_duration)
 
 ## Handle tap/click - raycast from screen position
 func handle_tap(screen_pos: Vector2) -> Dictionary:

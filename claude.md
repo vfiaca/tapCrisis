@@ -17,37 +17,59 @@ A hybrid mobile on-rails shooter built in Godot 4.2+ with Time Crisis-style cove
 
 ### CoverPoint (`scripts/core/cover_point.gd`)
 
-**Purpose:** Defines positions where the player can take cover, with left/right side support.
+**Purpose:** Defines positions where the player can take cover, with left/right side support and automatic anchor generation.
 
 **Key Properties:**
-- `@export var cover_side: String = "left"` - Which side of cover ("left" or "right")
-- Camera anchors for each side (CameraAnchor_Left, CameraAnchor_Right)
-- Position markers for player placement
+```gdscript
+@export var height: CoverHeight = CoverHeight.MEDIUM  # MEDIUM or TALL
+@export_flags("Left:1", "Right:2") var active_sides: int = 3  # Both sides by default
+@export var cover_name: String = ""  # For debugging
+
+# Camera settings
+@export var left_fov: float = 75.0
+@export var right_fov: float = 75.0
+
+# Movement timing (per-cover customization)
+@export var camera_transition_duration: float = 1.5
+@export var player_movement_duration: float = 0.8
+@export var transition_ease_type: Tween.EaseType = Tween.EASE_IN_OUT
+```
+
+**Automated Anchor System:**
+Each cover automatically generates 4 anchor points:
+- **PlayerAnchor_Left** - Ground-level position marker for left side (manually adjustable)
+- **PlayerAnchor_Right** - Ground-level position marker for right side (manually adjustable)
+- **CameraAnchor_Left** - Camera position for left side view (auto-positioned by height)
+- **CameraAnchor_Right** - Camera position for right side view (auto-positioned by height)
+
+**Cover Height & Animations:**
+- **MEDIUM**: Player uses crouch animation, camera at 1.2m
+- **TALL**: Player uses standing animation, camera at 1.6m
+- **Player anchors** are created at ground level (y=0) as position markers only
+- **Player height** is controlled by animation, not anchor position
+- **Camera anchors** are automatically positioned based on cover height
 
 **Node Structure:**
 ```
 CoverPoint (Node3D)
-├── CameraAnchor_Left (Node3D)
-│   ├── position: Where camera moves to
-│   └── rotation: Camera's orientation
-├── CameraAnchor_Right (Node3D)
-│   ├── position: Where camera moves to
-│   └── rotation: Camera's orientation
-└── (Optional: Visual mesh for debugging)
+├── PlayerAnchor_Left (Marker3D) - Auto-generated
+├── PlayerAnchor_Right (Marker3D) - Auto-generated
+├── CameraAnchor_Left (Marker3D) - Auto-generated
+├── CameraAnchor_Right (Marker3D) - Auto-generated
+├── Path_Left_Camera (Path3D) - Optional custom paths
+├── Path_Left_Player (Path3D) - Optional custom paths
+└── (... more paths)
 ```
 
-**How It Works:**
-- Each cover point has two camera anchors (left/right sides)
-- Camera anchors store both position AND rotation
-- When player takes cover, camera snaps to the anchor's transform
-- No look_at behavior - camera uses exact anchor transform
+**Simplified Workflow:**
+1. **Place CoverPoint** - Add CoverPoint node to your scene
+2. **Set Height** - Choose MEDIUM or TALL in Inspector
+3. **Click "Setup Cover Anchors"** - Creates all 4 anchors (camera auto-positioned, player at ground level)
+4. **Position Player Anchors** - Manually adjust PlayerAnchor_Left and PlayerAnchor_Right positions as needed
+5. **Connect Covers** - Set left_cover, right_cover, forward_cover, back_cover references
+6. **Create Paths** - Use the path creation buttons to connect anchors with custom paths
 
-**Usage:**
-1. Place CoverPoint node in scene
-2. Add CameraAnchor_Left and CameraAnchor_Right as children
-3. Position anchors where camera should be for each side
-4. Set anchor rotations to face desired direction
-5. Set cover_side based on level layout
+**Note:** Camera anchors are automatically positioned based on cover height. Player anchors are created at ground level (y=0) for you to position manually where the player should stand.
 
 ---
 
@@ -349,13 +371,20 @@ tapCrisis/
 │   └── levels/
 │       └── test_level.tscn (Test environment)
 ├── scripts/
-│   └── core/
-│       ├── camera_controller.gd (Camera + Input)
-│       ├── player_controller.gd (Player + Animations)
-│       ├── cover_point.gd (Cover point logic)
-│       └── game_manager.gd (Game coordination)
+│   ├── core/
+│   │   ├── camera_controller.gd (Camera + Input + Path following)
+│   │   ├── player_controller.gd (Player + Animations + Path following)
+│   │   ├── cover_point.gd (Cover point logic + Path references)
+│   │   └── game_manager.gd (Game coordination)
+├── addons/
+│   └── path_creator/
+│       ├── plugin.gd (Inspector-based path creation plugin)
+│       ├── plugin.cfg
+│       └── README.md
+├── docs/
+│   └── PATHS_GUIDE.md (Complete custom paths documentation)
 ├── characters/ (Future: Character models go here)
-└── claude.md (This file)
+└── CLAUDE.md (This file)
 ```
 
 ---
@@ -384,15 +413,116 @@ tapCrisis/
 
 ---
 
+## Custom Camera & Player Paths
+
+The game supports **dual custom paths** for cinematic camera movements and realistic player transitions between covers.
+
+### Path Types
+
+**Camera Paths:**
+- Create dramatic overhead sweeps and cinematic camera movements
+- Independent from player movement
+- Default: Gentle overhead arc (30% of distance, max 3m height)
+
+**Player Paths:**
+- Define realistic running/movement routes between covers
+- Stay close to ground for authentic character animation
+- Default: Low tactical path (0.5m height)
+
+### Quick Start
+
+1. **Enable Plugin:** Project → Settings → Plugins → "Path Creator"
+2. **Select CoverPoint:** Choose any cover in your scene
+3. **Path Creator Panel:** Appears in Inspector when CoverPoint is selected
+4. **Create Paths:**
+   - Select origin node → Click "Pick"
+   - Select destination node → Click "Pick"
+   - Choose direction (Left, Right, Forward, Back)
+   - Choose type (Camera or Player)
+   - Click "Create Path"
+5. **Edit:** Path is auto-selected - adjust curves in 3D viewport
+
+**Inspector-Based:** Clean interface integrated into Inspector panel for streamlined workflow!
+
+### Path Properties (per CoverPoint)
+
+```gdscript
+# Camera paths (cinematic)
+forward_camera_path: Path3D
+back_camera_path: Path3D
+left_camera_path: Path3D
+right_camera_path: Path3D
+
+# Player paths (movement)
+forward_player_path: Path3D
+back_player_path: Path3D
+left_player_path: Path3D
+right_player_path: Path3D
+```
+
+### Usage in Code
+
+```gdscript
+# Get paths
+var camera_path = cover.get_camera_path("forward")
+var player_path = cover.get_player_path("forward")
+
+# Both camera and player follow their respective paths (if defined)
+camera.transition_to_cover(next_cover, side, camera_path)
+await player.move_to_cover(next_cover, side, player_path)
+```
+
+**📖 For complete documentation, see [docs/PATHS_GUIDE.md](docs/PATHS_GUIDE.md)**
+
+---
+
 ## Common Operations
 
-### Adding a New Cover Point
-1. Instance `cover_point.tscn` in level
-2. Position where player should stand
-3. Add CameraAnchor_Left and CameraAnchor_Right children
-4. Position + rotate anchors for desired camera angles
-5. Set cover_side based on enemy placement
-6. GameManager auto-collects on level load
+### Adding a New Cover Point (Simplified Workflow)
+
+**Step 1: Create the Cover**
+1. Add new Node3D to your level scene
+2. Change type to `CoverPoint` (or instance `cover_point.tscn` if you have a template)
+3. Position it where you want the cover to be
+4. Give it a descriptive name (e.g., "Cover_Entrance")
+
+**Step 2: Configure Properties**
+1. Select the CoverPoint in the scene tree
+2. In the Inspector, set:
+   - **Height**: Choose `MEDIUM` (crouch) or `TALL` (stand)
+   - **Active Sides**: Check "Left" and/or "Right" (both enabled by default)
+   - **Cover Name**: Optional debug label
+   - **Movement Timing**: Adjust camera/player transition speeds if needed
+
+**Step 3: Auto-Generate Anchors**
+1. Scroll down to the "Cover Setup & Path Tools" panel in Inspector
+2. Click the **"🔧 Setup Cover Anchors"** button
+3. All 4 anchors (2 player, 2 camera) are created and positioned automatically!
+
+**Step 4: Connect to Other Covers**
+1. In the "Connections" group, set:
+   - `left_cover` - Cover to the left
+   - `right_cover` - Cover to the right
+   - `forward_cover` - Cover in front
+   - `back_cover` - Cover behind
+2. These create the movement graph for the level
+
+**Step 5: Create Custom Paths (Optional)**
+1. For each direction, choose starting side ("From Left" or "From Right")
+2. Enter target node path in the text field:
+   - For camera paths: `TargetCover/CameraAnchor_Left` (or Right)
+   - For player paths: `TargetCover/PlayerAnchor_Left` (or Right)
+   - Tip: Right-click node in scene tree → Copy Node Path
+3. Click **"Create"** next to "Camera" or "Player"
+4. Path is automatically created with smart curve defaults
+5. Click **"Edit"** to fine-tune the curve shape in 3D viewport
+
+**Benefits of Manual Target Selection:**
+- Connect to any Node3D in your scene (not just cover anchors)
+- Create asymmetric paths (different entry/exit points)
+- Full control over path endpoints for complex level layouts
+
+**That's it!** GameManager auto-collects covers on level load.
 
 ### Adjusting Shooting Timing
 1. Open Player scene in editor
@@ -481,6 +611,35 @@ tapCrisis/
 - Consolidated timing properties (step_out_speed, step_in_delay)
 - Fixed AnimationNodeStateMachineTransition parse error
 - Documented root motion integration workflow
+
+### Session 3 - Cover System Overhaul
+- Created Cover Path Tools editor plugin (addons/cover_path_tools/)
+- Implemented auto-anchor generation system
+- Added per-cover timing properties (camera_transition_duration, player_movement_duration)
+- Built dual-path system (separate camera and player paths)
+- Implemented side-specific path creation (forward/back from left/right sides)
+- Changed player anchors to ground-level markers (y=0, height via animation)
+- Camera anchors auto-positioned based on cover height (MEDIUM/TALL)
+
+### Session 4 - Manual Path Creation
+- Simplified path creation tool with manual target node selection
+- Replaced auto-detection with direct node path input fields
+- Added target node text fields to all direction/side combinations
+- Created `_on_create_path_manual()` for flexible path endpoint control
+- Updated all documentation (README, COVER_SETUP_GUIDE, CLAUDE.md)
+- Benefits: Connect to any Node3D, asymmetric paths, full endpoint control
+
+### Session 5 - Complete Path System Redesign
+- **Scrapped entire old path creation system** (deleted `addons/cover_path_tools/`)
+- Created brand new "Path Creator" plugin (`addons/path_creator/`)
+- **Inspector-based interface** - appears when CoverPoint selected
+- Node picker workflow: select origin → Pick → select destination → Pick → Create
+- Integrated anchor setup button for one-click cover configuration
+- No complex auto-detection or path typing
+- Single responsibility: create Path3D between two nodes
+- Clean, minimal UI focused on speed and clarity
+- Direction/type selection determines path naming only
+- Clear buttons (X) to reset selections quickly
 
 ---
 

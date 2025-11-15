@@ -21,6 +21,10 @@ window/size/viewport_width=360
 window/size/viewport_height=640
 window/stretch/mode="viewport"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/path_creator/plugin.cfg")
+
 [input]
 
 shoot={
