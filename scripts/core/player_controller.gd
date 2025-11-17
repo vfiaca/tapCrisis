@@ -53,6 +53,12 @@ var debug_hit_point: MeshInstance3D = null
 func _ready():
 	add_to_group("player")
 
+	# Initialize animation to neutral position
+	if animation_tree:
+		animation_tree.active = true
+		animation_tree.set("parameters/step/blend_position", 0.0)
+		print("Player: Animation initialized to neutral position (blend_position = 0.0)")
+
 	# Set to starting anchor if provided
 	if start_anchor:
 		global_position = start_anchor.global_position
@@ -94,12 +100,20 @@ func move_to_cover(target_cover: CoverPoint, target_side: String, custom_path: P
 
 	current_state = State.TRANSITIONING
 
+	# Save old state for animation transition
+	var old_cover = current_cover
+	var old_side = current_side
+
+	# Update state immediately (before movement starts)
+	current_cover = target_cover
+	current_side = target_side
+
 	# Determine transition animation
 	var from_id = ""
 	var to_id = target_cover.get_animation_id(target_side)
 
-	if current_cover:
-		from_id = current_cover.get_animation_id(current_side)
+	if old_cover:
+		from_id = old_cover.get_animation_id(old_side)
 
 	print("Transitioning: ", from_id, " → ", to_id)
 
@@ -124,9 +138,7 @@ func move_to_cover(target_cover: CoverPoint, target_side: String, custom_path: P
 			# Wait for movement to complete
 			await get_tree().create_timer(duration).timeout
 
-	# Update state
-	current_cover = target_cover
-	current_side = target_side
+	# Movement complete, return to cover state
 	current_state = State.IN_COVER
 
 ## Follow a Path3D curve to the destination
@@ -183,6 +195,9 @@ func rotate_to_side(new_side: String):
 
 	current_state = State.TRANSITIONING
 
+	# Update side immediately (before rotation starts)
+	current_side = new_side
+
 	# Get target position
 	var anchor = current_cover.get_player_anchor(new_side)
 	if anchor:
@@ -195,8 +210,7 @@ func rotate_to_side(new_side: String):
 		# Wait for rotation to complete (faster than cover-to-cover movement)
 		await get_tree().create_timer(rotation_duration).timeout
 
-	# Update state
-	current_side = new_side
+	# Rotation complete, return to cover state
 	current_state = State.IN_COVER
 
 ## Handle shoot input - manages animation and timing only
@@ -238,7 +252,9 @@ func _step_out():
 	print("Player: Stepping out")
 
 	# Determine which direction to step based on current side
-	var blend_position = -1.0 if current_side == "left" else 1.0
+	# Left side of cover → step RIGHT (out from left)
+	# Right side of cover → step LEFT (out from right)
+	var blend_position = 1 if current_side == "left" else -1
 
 	animation_tree.active = true
 	animation_player.speed_scale = step_out_speed

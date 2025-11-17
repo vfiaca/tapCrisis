@@ -11,6 +11,9 @@ var swipe_start_pos: Vector2 = Vector2.ZERO
 var is_swiping: bool = false
 const SWIPE_THRESHOLD: float = 50.0
 
+# Timing defaults
+const DEFAULT_CAMERA_START_DELAY: float = 0.3  ## Default delay before camera follows player
+
 # References
 var player: PlayerController = null
 var camera: CameraController = null
@@ -45,12 +48,17 @@ func _ready():
 	if not starting_cover and covers.size() > 0:
 		starting_cover = covers[0]
 
+	# Ensure starting_side has a valid value
+	if not starting_side or starting_side == "":
+		starting_side = "left"
+		print("Warning: starting_side was not set, defaulting to 'left'")
+
 	if starting_cover:
 		# Move player to starting cover
 		player.move_to_cover(starting_cover, starting_side)
 		# Move camera to starting cover
 		camera.transition_to_cover(starting_cover, starting_side)
-		print("Started at cover: ", starting_cover.get_display_name())
+		print("Started at cover: ", starting_cover.get_display_name(), " (side: ", starting_side, ")")
 	else:
 		push_error("No starting cover set!")
 
@@ -191,7 +199,12 @@ func _find_enemy_controller(node: Node):
 	return null
 
 func _handle_swipe_direction(direction: String):
-	print("Swipe: ", direction)
+	print("=== Swipe Debug ===")
+	print("  Direction: ", direction)
+	print("  Current cover: ", player.current_cover.get_display_name() if player.current_cover else "None")
+	print("  Current side: ", player.current_side)
+	print("  Has left side: ", player.current_cover.has_left_side() if player.current_cover else "N/A")
+	print("  Has right side: ", player.current_cover.has_right_side() if player.current_cover else "N/A")
 
 	if not player.current_cover:
 		return
@@ -200,20 +213,33 @@ func _handle_swipe_direction(direction: String):
 	is_transitioning = true
 
 	# Check if swiping to opposite side of same cover
+	# Only attempt rotation if current cover has BOTH sides active
 	if direction == "left" and player.current_side == "right":
-		if player.current_cover.has_left_side():
+		# Only rotate if the target side exists AND we're currently on the opposite side
+		if player.current_cover.has_left_side() and player.current_cover.has_right_side():
 			# No custom path for same-cover side switches
-			camera.transition_to_cover(player.current_cover, "left", null)
-			await get_tree().create_timer(camera.transition_lead_time).timeout
-			await player.rotate_to_side("left")
+			# Player starts rotating first
+			player.rotate_to_side("left")
+			var delay = player.current_cover.camera_start_delay if player.current_cover.camera_start_delay >= 0 else DEFAULT_CAMERA_START_DELAY
+			print("Player started rotating, waiting ", delay, "s before camera follows")
+			await get_tree().create_timer(delay).timeout
+			# Camera follows after delay
+			print("Camera starting transition now")
+			await camera.transition_to_cover(player.current_cover, "left", null)
 			is_transitioning = false
 			return
 	elif direction == "right" and player.current_side == "left":
-		if player.current_cover.has_right_side():
+		# Only rotate if the target side exists AND we're currently on the opposite side
+		if player.current_cover.has_right_side() and player.current_cover.has_left_side():
 			# No custom path for same-cover side switches
-			camera.transition_to_cover(player.current_cover, "right", null)
-			await get_tree().create_timer(camera.transition_lead_time).timeout
-			await player.rotate_to_side("right")
+			# Player starts rotating first
+			player.rotate_to_side("right")
+			var delay = player.current_cover.camera_start_delay if player.current_cover.camera_start_delay >= 0 else DEFAULT_CAMERA_START_DELAY
+			print("Player started rotating, waiting ", delay, "s before camera follows")
+			await get_tree().create_timer(delay).timeout
+			# Camera follows after delay
+			print("Camera starting transition now")
+			await camera.transition_to_cover(player.current_cover, "right", null)
 			is_transitioning = false
 			return
 
@@ -224,10 +250,18 @@ func _handle_swipe_direction(direction: String):
 		# Determine which side to enter from
 		var next_side = _determine_entry_side(next_cover, direction)
 
+		# Save SOURCE cover reference before player state changes
+		var source_cover = player.current_cover
+
 		# Check for custom paths for this direction
 		# For forward/back, look for side-specific paths first
-		var camera_path = _get_path_for_direction(player.current_cover, direction, "camera", player.current_side)
-		var player_path = _get_path_for_direction(player.current_cover, direction, "player", player.current_side)
+		var camera_path = _get_path_for_direction(source_cover, direction, "camera", player.current_side)
+		var player_path = _get_path_for_direction(source_cover, direction, "player", player.current_side)
+
+		# Respect source cover's force_linear_transition setting
+		if source_cover.force_linear_transition:
+			camera_path = null
+			print("Source cover has force_linear_transition = true, using linear camera movement")
 
 		if camera_path:
 			print("Using custom camera path for ", direction, ": ", camera_path.name)
@@ -239,10 +273,16 @@ func _handle_swipe_direction(direction: String):
 		else:
 			print("No player path - player will snap to position")
 
-		# Camera and player move together (camera leads slightly)
-		camera.transition_to_cover(next_cover, next_side, camera_path)
-		await get_tree().create_timer(camera.transition_lead_time).timeout
-		await player.move_to_cover(next_cover, next_side, player_path)
+		# Use SOURCE cover's timing (where we're leaving FROM, not going TO)
+		var delay = source_cover.camera_start_delay if source_cover.camera_start_delay >= 0 else DEFAULT_CAMERA_START_DELAY
+
+		# Player starts moving first
+		player.move_to_cover(next_cover, next_side, player_path)
+		print("Player started moving, waiting ", delay, "s before camera follows")
+		await get_tree().create_timer(delay).timeout
+		# Camera follows after delay
+		print("Camera starting transition now")
+		await camera.transition_to_cover(next_cover, next_side, camera_path)
 		is_transitioning = false
 	else:
 		print("No cover in direction: ", direction)

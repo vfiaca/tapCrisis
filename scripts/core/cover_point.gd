@@ -17,9 +17,11 @@ enum CoverHeight { MEDIUM, TALL }
 @export var right_fov: float = 75.0  ## FOV for right camera anchor
 
 @export_group("Movement Timing")
-@export var camera_transition_duration: float = 1.5  ## Duration of camera movement to this cover
-@export var player_movement_duration: float = 0.8  ## Duration of player movement to this cover
-@export var transition_ease_type: Tween.EaseType = Tween.EASE_IN_OUT  ## Easing for transitions
+@export var camera_start_delay: float = -1.0  ## Delay before camera follows when LEAVING this cover (seconds). -1 = use game default (0.3s)
+@export var camera_transition_duration: float = -1.0  ## Camera transition speed when LEAVING this cover. -1 = use camera default (0.5s)
+@export var player_movement_duration: float = -1.0  ## Player movement speed when LEAVING this cover. -1 = use default (0.8s)
+@export var transition_ease_type: Tween.EaseType = Tween.EASE_IN_OUT  ## Easing for transitions when leaving this cover
+@export var force_linear_transition: bool = false  ## Force linear camera transition when leaving (ignore custom paths)
 
 @export_group("Connections")
 @export var left_cover: CoverPoint = null
@@ -39,6 +41,13 @@ enum CoverHeight { MEDIUM, TALL }
 @export var forward_player_path: Path3D = null  ## Player movement path to forward cover
 @export var back_player_path: Path3D = null  ## Player movement path to back cover
 
+@export_group("Anchor Setup Options")
+@export var create_player_left: bool = true  ## Create/update PlayerAnchor_Left
+@export var create_player_right: bool = true  ## Create/update PlayerAnchor_Right
+@export var create_camera_left: bool = true  ## Create/update CameraAnchor_Left
+@export var create_camera_right: bool = true  ## Create/update CameraAnchor_Right
+@export var create_debug_camera: bool = true  ## Create/update DebugCamera for editor preview
+
 # Child nodes (set in _ready)
 var player_anchor_left: Marker3D
 var player_anchor_right: Marker3D
@@ -56,22 +65,29 @@ func _cache_child_nodes():
 	camera_anchor_right = get_node_or_null("CameraAnchor_Right")
 
 ## EDITOR TOOL: Setup cover with auto-generated anchors
-## Call this from the editor to automatically create all anchor nodes
+## Call this from the editor to automatically create selected anchor nodes
 func setup_cover_anchors():
 	if not Engine.is_editor_hint():
 		return
 
 	print("Setting up cover: ", name)
 
-	# Get or create anchors
-	var anchors = {
-		"PlayerAnchor_Left": null,
-		"PlayerAnchor_Right": null,
-		"CameraAnchor_Left": null,
-		"CameraAnchor_Right": null
+	# Define which anchors to process based on toggles
+	var anchor_config = {
+		"PlayerAnchor_Left": create_player_left,
+		"PlayerAnchor_Right": create_player_right,
+		"CameraAnchor_Left": create_camera_left,
+		"CameraAnchor_Right": create_camera_right
 	}
 
-	for anchor_name in anchors.keys():
+	var anchors = {}
+
+	# Get or create only selected anchors
+	for anchor_name in anchor_config.keys():
+		if not anchor_config[anchor_name]:
+			print("  Skipping: ", anchor_name, " (disabled)")
+			continue
+
 		var existing = get_node_or_null(anchor_name)
 		if existing:
 			anchors[anchor_name] = existing
@@ -84,53 +100,95 @@ func setup_cover_anchors():
 			anchors[anchor_name] = new_anchor
 			print("  Created: ", anchor_name)
 
-	# Position anchors based on cover height
-	_position_anchors_by_height(anchors)
+	# Position selected anchors based on cover height
+	if anchors.size() > 0:
+		_position_anchors_by_height(anchors)
 
-	print("✓ Cover setup complete!")
+	# Create debug camera if requested
+	if create_debug_camera:
+		_setup_debug_camera(anchors)
+
+	if anchors.size() > 0 or create_debug_camera:
+		print("✓ Cover setup complete!")
+	else:
+		print("⚠ No anchors or debug camera selected to create")
 
 ## Position anchors based on cover height preset
 func _position_anchors_by_height(anchors: Dictionary):
-	var camera_height: float
-	var camera_distance: float
-	var side_offset: float = 0.5  # Distance from center
-
-	# Set camera positioning based on cover type
-	# Player height is handled by animations (crouch for MEDIUM, stand for TALL)
-	match height:
-		CoverHeight.MEDIUM:
-			camera_height = 1.2  # Camera slightly above cover
-			camera_distance = 0.8  # Camera pulls back slightly
-		CoverHeight.TALL:
-			camera_height = 1.6  # Camera at head height
-			camera_distance = 1.0  # Camera pulls back more
+	var side_offset: float = 1.0  # Distance from center (2 units apart total)
 
 	# Player anchors: Ground-level markers only (y=0)
 	# These are just position markers - height comes from animation
+	var player_anchors_created = []
 	if anchors.has("PlayerAnchor_Left"):
 		anchors["PlayerAnchor_Left"].position = Vector3(-side_offset, 0, 0)
+		player_anchors_created.append("Left")
 	if anchors.has("PlayerAnchor_Right"):
 		anchors["PlayerAnchor_Right"].position = Vector3(side_offset, 0, 0)
+		player_anchors_created.append("Right")
 
-	print("  Note: Player anchors created at ground level (y=0)")
-	print("  → Manually adjust their positions as needed")
-	print("  → Player height controlled by animation (crouch/stand)")
+	if player_anchors_created.size() > 0:
+		print("  Player anchors (", ", ".join(player_anchors_created), ") at ground level (y=0)")
+		print("  → Manually adjust positions as needed")
+		print("  → Height controlled by animation (crouch/stand)")
 
-	# Position camera anchors (left/right, slightly back and up)
+	# Position camera anchors (at ground level, no rotation, 2 units apart)
+	var camera_anchors_created = []
 	if anchors.has("CameraAnchor_Left"):
 		var cam_left = anchors["CameraAnchor_Left"]
-		cam_left.position = Vector3(-side_offset, camera_height, -camera_distance)
-		# Rotate to look forward and slightly down
-		cam_left.rotation_degrees = Vector3(-10, 0, 0)
+		cam_left.position = Vector3(-side_offset, 0, 0)
+		cam_left.rotation = Vector3.ZERO  # No rotation
+		camera_anchors_created.append("Left")
 
 	if anchors.has("CameraAnchor_Right"):
 		var cam_right = anchors["CameraAnchor_Right"]
-		cam_right.position = Vector3(side_offset, camera_height, -camera_distance)
-		# Rotate to look forward and slightly down
-		cam_right.rotation_degrees = Vector3(-10, 0, 0)
+		cam_right.position = Vector3(side_offset, 0, 0)
+		cam_right.rotation = Vector3.ZERO  # No rotation
+		camera_anchors_created.append("Right")
 
-	print("  Positioned camera anchors for ", CoverHeight.keys()[height], " cover")
-	print("    Camera height: ", camera_height)
+	if camera_anchors_created.size() > 0:
+		print("  Camera anchors (", ", ".join(camera_anchors_created), ") at y=0, no rotation")
+		print("  → 2 units apart (±", side_offset, " from center)")
+
+## Setup debug camera for editor preview
+func _setup_debug_camera(anchors: Dictionary):
+	# Check if DebugCamera already exists
+	var debug_cam = get_node_or_null("DebugCamera")
+
+	if debug_cam:
+		print("  Found existing: DebugCamera")
+	else:
+		# Create new Camera3D
+		debug_cam = Camera3D.new()
+		debug_cam.name = "DebugCamera"
+
+		# Load and attach the debug camera script
+		var script_path = "res://scripts/core/cover_camera_debug.gd"
+		var script = load(script_path)
+		if script:
+			debug_cam.set_script(script)
+		else:
+			push_warning("Could not load cover_camera_debug.gd script")
+
+		add_child(debug_cam)
+		debug_cam.owner = get_tree().edited_scene_root
+		print("  Created: DebugCamera")
+
+	# Position at left camera anchor if it exists, otherwise use calculated position
+	if anchors.has("CameraAnchor_Left"):
+		debug_cam.global_transform = anchors["CameraAnchor_Left"].global_transform
+		print("  → Positioned at CameraAnchor_Left")
+	elif anchors.has("CameraAnchor_Right"):
+		debug_cam.global_transform = anchors["CameraAnchor_Right"].global_transform
+		print("  → Positioned at CameraAnchor_Right")
+	else:
+		# Use default positioning (left side, y=0, no rotation)
+		debug_cam.position = Vector3(-1.0, 0, 0)
+		debug_cam.rotation = Vector3.ZERO
+		print("  → Positioned at default location")
+
+	# Set keep_aspect to width (same as in cover_point.tscn)
+	debug_cam.keep_aspect = Camera3D.KEEP_WIDTH
 
 ## Check if left side is active
 func has_left_side() -> bool:

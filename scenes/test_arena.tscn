@@ -1,6 +1,6 @@
 [gd_scene load_steps=14 format=3 uid="uid://25wrdymbdmea"]
 
-[ext_resource type="PackedScene" uid="uid://bfohes30a6o1a" path="res://scenes/core/cover_point.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://bfohes30a6o1a" path="res://scenes/level/cover_point.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://cn0hedv0t8tti" path="res://scenes/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/core/camera_controller.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/core/game_manager.tscn" id="4"]
@@ -15,7 +15,7 @@ point_count = 2
 
 [sub_resource type="Curve3D" id="Curve3D_i8g6w"]
 _data = {
-"points": PackedVector3Array(0, 0, 0, 0, 0.99529344, -0.663529, 0, 0, 0, 0, 0.99529344, 0.663529, 0, 0, 0, 2.8785605, 0.34972072, -1.6119404),
+"points": PackedVector3Array(-0.8262379, -0.024397254, 0.8114147, 0.8262379, 0.024397254, -0.8114147, 0, 0, 0, -1.468185, 0.36370516, 0.78747106, 1.468185, -0.36370516, -0.78747106, 2.8785605, 0.34972072, -1.6119404),
 "tilts": PackedFloat32Array(0, 0)
 }
 point_count = 2
@@ -53,7 +53,7 @@ start_anchor = NodePath("../../Covers/Cover_Medium_01Start/CameraAnchor_Left")
 transition_lead_time = 0.2
 
 [node name="Player" parent="GameManager" node_paths=PackedStringArray("start_anchor") instance=ExtResource("2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.581289, 0, 0.78100395)
+transform = Transform3D(-0.9997141, 0, 0.02390863, 0, 1, 0, -0.02390863, 0, -0.9997141, -2.5812895, 0, 0.78100395)
 start_anchor = NodePath("../../Covers/Cover_Medium_01Start/PlayerAnchor_Left")
 
 [node name="Enemies" type="Node3D" parent="."]
@@ -101,7 +101,6 @@ curve = SubResource("Curve3D_i8g6w")
 
 [node name="DebugCamera" parent="Covers/Cover_Medium_01Start" index="5"]
 transform = Transform3D(0.9988075, -0.009170188, 0.047955476, 0.0063757095, 0.99829024, 0.058103956, -0.048406325, -0.05772891, 0.99715817, 2.0787387, 1.7769878, 3.138572)
-keep_aspect = 0
 target_side = 1
 
 [node name="Cover_Tall_01Middle" parent="Covers" node_paths=PackedStringArray("left_cover", "right_cover", "forward_cover") instance=ExtResource("1")]

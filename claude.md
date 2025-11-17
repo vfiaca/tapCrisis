@@ -29,11 +29,17 @@ A hybrid mobile on-rails shooter built in Godot 4.2+ with Time Crisis-style cove
 @export var left_fov: float = 75.0
 @export var right_fov: float = 75.0
 
-# Movement timing (per-cover customization)
-@export var camera_transition_duration: float = 1.5
-@export var player_movement_duration: float = 0.8
-@export var transition_ease_type: Tween.EaseType = Tween.EASE_IN_OUT
+# Movement timing (applies when LEAVING this cover)
+@export var camera_start_delay: float = -1.0  # Delay before camera follows when leaving. -1 = use default (0.3s)
+@export var camera_transition_duration: float = -1.0  # Camera transition speed when leaving. -1 = use default (0.5s)
+@export var player_movement_duration: float = -1.0  # Player movement speed when leaving. -1 = use default (0.8s)
+@export var transition_ease_type: Tween.EaseType = Tween.EASE_IN_OUT  # Easing when leaving
+@export var force_linear_transition: bool = false  # Force linear camera movement when leaving
 ```
+
+**Timing Design:** All timing settings apply when the player LEAVES this cover, not when arriving. This means you configure each cover once, and those settings are used whenever you depart from it.
+
+**Timing Values:** All timing values use `-1` as a sentinel meaning "use system default". Set to `0` or any positive value to override with explicit timing. This allows intentional zero-delay transitions (e.g., `camera_start_delay = 0.0` for instant camera follow).
 
 **Automated Anchor System:**
 Each cover automatically generates 4 anchor points:
@@ -81,10 +87,15 @@ CoverPoint (Node3D)
 
 **Key Properties:**
 ```gdscript
-@export var camera_move_speed: float = 5.0  ## Speed of camera transitions
-@export var look_sensitivity: float = 0.002  ## Mouse/touch look sensitivity
-@export var vertical_look_limit: float = 60.0  ## Max vertical rotation (degrees)
+@export var start_anchor: Marker3D = null  ## Optional: Set camera to this anchor's transform at start
+
+# Internal defaults (not exported - configure timing per cover instead)
+const DEFAULT_TRANSITION_DURATION: float = 0.5
+const DEFAULT_TRANSITION_EASE: Tween.EaseType = Tween.EASE_IN_OUT
+const DEFAULT_TRANSITION_TRANS: Tween.TransitionType = Tween.TRANS_CUBIC
 ```
+
+**Note:** Camera timing is configured per-cover via [CoverPoint](scripts/core/cover_point.gd#L20-L24) exports, not on the camera itself. The camera's defaults are only used when a cover doesn't specify timing (value = -1).
 
 **Architecture - Camera as Controller:**
 The camera IS the player controller. This is different from traditional FPS:
@@ -106,10 +117,19 @@ CameraController (Camera3D)
 
 **Camera Movement:**
 ```gdscript
-func move_to_cover(cover_point: CoverPoint, side: String):
-    # Smoothly interpolates to cover anchor position + rotation
-    # Uses exact transform from CameraAnchor, no look_at
+func transition_to_cover(cover: CoverPoint, side: String, custom_path: Path3D = null):
+    # Smoothly transitions to cover anchor position + rotation
+    # Uses quaternion slerp for rotation to avoid 360-degree spins
+    # Supports custom Path3D curves for cinematic camera movements
+    # Respects cover's force_linear_transition flag
 ```
+
+**Camera Transition System:**
+- **Player-First Movement**: Player starts moving, then camera follows after `camera_start_delay`
+- **Quaternion Rotation**: Uses `Quaternion.slerp()` to prevent camera spinning during transitions
+- **Path Following**: Optionally follows Path3D curves for cinematic camera movements
+- **Linear Override**: Set `force_linear_transition = true` on CoverPoint to ignore custom paths
+- **Per-Cover Timing**: Each cover can override default transition duration and easing
 
 **Shooting:**
 ```gdscript
@@ -640,6 +660,30 @@ await player.move_to_cover(next_cover, side, player_path)
 - Clean, minimal UI focused on speed and clarity
 - Direction/type selection determines path naming only
 - Clear buttons (X) to reset selections quickly
+
+### Session 6 - Camera Timing & Transition Fixes
+- **Fixed export variable runtime bug**: Changed timing defaults to -1 (sentinel value) to distinguish "use default" from "user set to 0"
+- **Added camera start delay system**: Player moves first, camera follows after configurable delay
+- **Fixed camera rotation spinning**: Converted from Euler angle interpolation to Quaternion slerp for shortest-path rotation
+- **Added force_linear_transition option**: Allow designers to override custom paths and force linear camera movement
+- **Updated conditional logic**: Changed all `> 0` checks to `>= 0` to allow explicit zero values
+- **Per-cover timing overrides**: Each cover can now properly override camera transition duration, delay, and easing
+- **Source-based timing design**: Timing settings apply when LEAVING a cover (not arriving), reducing configuration complexity
+- **Simplified timing architecture**: Removed camera controller timing exports, made them internal constants - timing is now configured ONLY per-cover
+- **Added debug output**: Camera transitions now log duration, ease type, and force_linear flag for troubleshooting
+- **GameManager timing defaults**: Added DEFAULT_CAMERA_START_DELAY constant (0.3s) for consistent fallback behavior
+
+### Session 7 - Animation & State Timing Fixes
+- **Fixed reversed step-out animations**: Corrected blend_position logic in `_step_out()` function
+- **Animation direction now matches cover side**: Left side → step RIGHT (out from left), Right side → step LEFT (out from right)
+- **Updated player_controller.gd:249**: Inverted animation logic from `-1.0 if left else 1.0` to `1.0 if left else -1.0`
+- **Fixed double-swipe bug**: Moved state updates to START of movement functions instead of end
+- **State timing correction**: `current_cover` and `current_side` now update immediately when movement begins, preventing race conditions
+- **Fixed player spawn offset**: Added animation initialization in `_ready()` to set blend_position = 0.0 at startup
+- **Added starting_side safety check**: Defaults to "left" if null or empty in game_manager.gd
+- **Updated both movement functions**: Applied state timing fix to both `move_to_cover()` and `rotate_to_side()`
+- **Side rotation logic improvement**: Only attempt rotation when current cover has BOTH sides active
+- **Added debug output**: Swipe direction handling now logs current cover state for troubleshooting
 
 ---
 

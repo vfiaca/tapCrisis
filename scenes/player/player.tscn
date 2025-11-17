@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://cn0hedv0t8tti"]
+[gd_scene load_steps=17 format=3 uid="uid://cn0hedv0t8tti"]
 
 [ext_resource type="Script" uid="uid://dlwe13ynivbjl" path="res://scripts/core/player_controller.gd" id="1_dovo2"]
 
@@ -12,7 +12,13 @@ albedo_color = Color(0.2, 0.5, 1, 1)
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
 material = SubResource("StandardMaterial3D_player")
 radius = 0.3
-height = 1.6
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8afob"]
+albedo_color = Color(0.013081906, 0.07525383, 0.19172795, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_dovo2"]
+material = SubResource("StandardMaterial3D_8afob")
 
 [sub_resource type="Animation" id="Animation_RESET"]
 resource_name = "RESET"
@@ -43,7 +49,7 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.15),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector3(0, 0, 0), Vector3(-0.4, 0, 0)]
+"values": [Vector3(0, 0, 0), Vector3(-0.7, 0, 0)]
 }
 
 [sub_resource type="Animation" id="Animation_step_right"]
@@ -59,14 +65,14 @@ tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.15),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
-"values": [Vector3(0, 0, 0), Vector3(0.4, 0, 0)]
+"values": [Vector3(0, 0, 0), Vector3(0.7, 0, 0)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_player"]
 _data = {
-"RESET": SubResource("Animation_RESET"),
-"step_left": SubResource("Animation_step_left"),
-"step_right": SubResource("Animation_step_right")
+&"RESET": SubResource("Animation_RESET"),
+&"step_left": SubResource("Animation_step_left"),
+&"step_right": SubResource("Animation_step_right")
 }
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_left"]
@@ -85,16 +91,18 @@ blend_point_1/node = SubResource("AnimationNodeAnimation_reset")
 blend_point_1/pos = 0.0
 blend_point_2/node = SubResource("AnimationNodeAnimation_right")
 blend_point_2/pos = 1.0
+min_space = -5.0
+max_space = 5.0
 blend_mode = 1
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_start_to_step"]
 advance_mode = 2
 
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_root"]
-states/Start/position = Vector2(200, 100)
 states/step/node = SubResource("AnimationNodeBlendSpace1D_step")
 states/step/position = Vector2(400, 100)
 transitions = ["Start", "step", SubResource("AnimationNodeStateMachineTransition_start_to_step")]
+graph_offset = Vector2(-80, -34)
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 script = ExtResource("1_dovo2")
@@ -106,8 +114,13 @@ shape = SubResource("CapsuleShape3D_gmlin")
 [node name="Model" type="Node3D" parent="."]
 
 [node name="PlayerMesh" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("CapsuleMesh_player")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(0.4174801, 0, 0, 0, 0.13509238, 0, 0, 0, 0.2268557, 0, 1.4199411, 0.27447337)
+mesh = SubResource("BoxMesh_dovo2")
+skeleton = NodePath("../PlayerMesh")
 
 [node name="ShootOrigin" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
@@ -119,10 +132,10 @@ target_position = Vector3(0, 0, 100)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
-"": SubResource("AnimationLibrary_player")
+&"": SubResource("AnimationLibrary_player")
 }
 
 [node name="AnimationTree" type="AnimationTree" parent="."]
 tree_root = SubResource("AnimationNodeStateMachine_root")
 anim_player = NodePath("../AnimationPlayer")
-parameters/step/blend_position = 0.0
+parameters/step/blend_position = 1.9152856

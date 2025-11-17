@@ -8,10 +8,7 @@ class_name CoverCameraDebugTool
 enum TargetSide { LEFT, RIGHT }
 
 @export_group("Debug Tool")
-@export var target_side: TargetSide = TargetSide.LEFT:
-	set(value):
-		target_side = value
-		_update_from_anchor()
+@export var target_side: TargetSide = TargetSide.LEFT
 
 @export var apply_to_anchor: bool = false:
 	set(value):
@@ -29,7 +26,6 @@ func _ready():
 	if Engine.is_editor_hint():
 		# Find parent CoverPoint
 		cover_point = _find_cover_point(get_parent())
-		_update_from_anchor()
 
 func _find_cover_point(node: Node) -> CoverPoint:
 	if node is CoverPoint:
