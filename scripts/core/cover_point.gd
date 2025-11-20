@@ -17,9 +17,9 @@ enum CoverHeight { MEDIUM, TALL }
 @export var right_fov: float = 75.0  ## FOV for right camera anchor
 
 @export_group("Movement Timing")
-@export var camera_start_delay: float = -1.0  ## Delay before camera follows when LEAVING this cover (seconds). -1 = use game default (0.3s)
-@export var camera_transition_duration: float = -1.0  ## Camera transition speed when LEAVING this cover. -1 = use camera default (0.5s)
-@export var player_movement_duration: float = -1.0  ## Player movement speed when LEAVING this cover. -1 = use default (0.8s)
+@export var camera_start_delay: float = 0  ## Delay before camera follows when LEAVING this cover (seconds). -1 = use game default (0.3s)
+@export var camera_transition_duration: float = 0  ## Camera transition speed when LEAVING this cover. -1 = use camera default (0.5s)
+@export var player_movement_duration: float = 0  ## Player movement speed when LEAVING this cover. -1 = use default (0.8s)
 @export var transition_ease_type: Tween.EaseType = Tween.EASE_IN_OUT  ## Easing for transitions when leaving this cover
 @export var force_linear_transition: bool = false  ## Force linear camera transition when leaving (ignore custom paths)
 

@@ -35,6 +35,18 @@ tracks/0/keys = {
 "update": 0,
 "values": [Vector3(0, 0, 0)]
 }
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Model:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 3.1415927, 0)]
+}
 
 [sub_resource type="Animation" id="Animation_step_left"]
 resource_name = "step_left"
@@ -43,13 +55,25 @@ tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
 tracks/0/path = NodePath("Model:position")
-tracks/0/interp = 2
+tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.15),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
 "values": [Vector3(0, 0, 0), Vector3(-0.7, 0, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Model:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, 3.1415927, 0), Vector3(0, 6.2831855, 0)]
 }
 
 [sub_resource type="Animation" id="Animation_step_right"]
@@ -59,13 +83,25 @@ tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
 tracks/0/path = NodePath("Model:position")
-tracks/0/interp = 2
+tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
 "times": PackedFloat32Array(0, 0.15),
 "transitions": PackedFloat32Array(1, 1),
 "update": 0,
 "values": [Vector3(0, 0, 0), Vector3(0.7, 0, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Model:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, 3.1415927, 0), Vector3(0, 0, 0)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_player"]
@@ -99,10 +135,11 @@ blend_mode = 1
 advance_mode = 2
 
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_root"]
+states/Start/position = Vector2(191, 100)
 states/step/node = SubResource("AnimationNodeBlendSpace1D_step")
-states/step/position = Vector2(400, 100)
+states/step/position = Vector2(405, 100)
 transitions = ["Start", "step", SubResource("AnimationNodeStateMachineTransition_start_to_step")]
-graph_offset = Vector2(-80, -34)
+graph_offset = Vector2(-81, -34)
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 script = ExtResource("1_dovo2")
@@ -112,20 +149,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
 shape = SubResource("CapsuleShape3D_gmlin")
 
 [node name="Model" type="Node3D" parent="."]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
 
 [node name="PlayerMesh" type="MeshInstance3D" parent="Model"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("CapsuleMesh_player")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(0.4174801, 0, 0, 0, 0.13509238, 0, 0, 0, 0.2268557, 0, 1.4199411, 0.27447337)
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Model/PlayerMesh"]
+transform = Transform3D(0.4174801, 0, 0, 0, 0.13509238, 0, 0, 0, 0.2268557, 0, 0.5199411, 0.27447337)
 mesh = SubResource("BoxMesh_dovo2")
-skeleton = NodePath("../PlayerMesh")
 
-[node name="ShootOrigin" type="Node3D" parent="."]
+[node name="ShootOrigin" type="Node3D" parent="Model"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
 
-[node name="ShootRaycast" type="RayCast3D" parent="."]
+[node name="ShootRaycast" type="RayCast3D" parent="Model"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
 enabled = false
 target_position = Vector3(0, 0, 100)
@@ -138,4 +175,4 @@ libraries = {
 [node name="AnimationTree" type="AnimationTree" parent="."]
 tree_root = SubResource("AnimationNodeStateMachine_root")
 anim_player = NodePath("../AnimationPlayer")
-parameters/step/blend_position = 1.9152856
+parameters/step/blend_position = -1.0964084

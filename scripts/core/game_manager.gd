@@ -12,7 +12,7 @@ var is_swiping: bool = false
 const SWIPE_THRESHOLD: float = 50.0
 
 # Timing defaults
-const DEFAULT_CAMERA_START_DELAY: float = 0.3  ## Default delay before camera follows player
+const DEFAULT_CAMERA_START_DELAY: float = 0  ## Default delay before camera follows player
 
 # References
 var player: PlayerController = null

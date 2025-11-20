@@ -44,7 +44,7 @@ var move_progress: float = 0.0
 @onready var model: Node3D = $Model
 @onready var animation_player: AnimationPlayer = $AnimationPlayer if has_node("AnimationPlayer") else null
 @onready var animation_tree: AnimationTree = $AnimationTree if has_node("AnimationTree") else null
-@onready var shoot_origin: Node3D = $ShootOrigin
+@onready var shoot_origin: Node3D = $Model/ShootOrigin
 
 # Debug visualization
 var debug_line: MeshInstance3D = null
@@ -327,7 +327,7 @@ func _create_debug_visuals():
 	debug_hit_point.name = "DebugHitPoint"
 	var sphere_mesh = SphereMesh.new()
 	sphere_mesh.radius = 0.1
-	sphere_mesh.height = 0.2
+	sphere_mesh.height = 0.1
 	debug_hit_point.mesh = sphere_mesh
 
 	# Create material for hit point

@@ -50,7 +50,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, 2)
 keep_aspect = 0
 fov = 70.0
 start_anchor = NodePath("../../Covers/Cover_Medium_01Start/CameraAnchor_Left")
-transition_lead_time = 0.2
 
 [node name="Player" parent="GameManager" node_paths=PackedStringArray("start_anchor") instance=ExtResource("2")]
 transform = Transform3D(-0.9997141, 0, 0.02390863, 0, 1, 0, -0.02390863, 0, -0.9997141, -2.5812895, 0, 0.78100395)
@@ -78,6 +77,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.454728, -9.536743e-07, -6.8
 [node name="Cover_Medium_01Start" parent="Covers" node_paths=PackedStringArray("right_cover", "forward_cover") instance=ExtResource("1")]
 transform = Transform3D(0.98761725, 0, -0.15688266, 0, 1, 0, 0.15688266, 0, 0.98761725, -5.5403366, 0, -0.22015962)
 cover_name = "Start (Medium)"
+camera_transition_duration = 1.5
+player_movement_duration = 0.8
 right_cover = NodePath("../Cover_Tall_01Middle")
 forward_cover = NodePath("../Cover_Tall_02Left")
 
@@ -109,6 +110,8 @@ height = 1
 cover_name = "Right (Tall)"
 left_fov = 100.6
 right_fov = 90.6
+camera_transition_duration = 1.5
+player_movement_duration = 0.8
 left_cover = NodePath("../Cover_Medium_01Start")
 right_cover = NodePath("../Cover_Tall_01Right")
 forward_cover = NodePath("../Cover_Medium_02Middle")
@@ -133,6 +136,8 @@ fov = 100.6
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.788205, 0, 0.2472899)
 height = 1
 cover_name = "Right (Tall)"
+camera_transition_duration = 1.5
+player_movement_duration = 0.8
 left_cover = NodePath("../Cover_Tall_01Middle")
 forward_cover = NodePath("../Cover_Tall_02Left")
 
@@ -157,6 +162,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.6978636, 0, -6)
 height = 1
 active_sides = 2
 cover_name = "Left (Tall)"
+camera_transition_duration = 1.5
+player_movement_duration = 0.8
 right_cover = NodePath("../Cover_Medium_02Middle")
 back_cover = NodePath("../Cover_Medium_01Start")
 
@@ -169,6 +176,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.5226846)
 [node name="Cover_Medium_02Middle" parent="Covers" node_paths=PackedStringArray("left_cover", "right_cover", "back_cover") instance=ExtResource("1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15279055, 0, -6)
 cover_name = "Forward (Medium)"
+camera_transition_duration = 1.5
+player_movement_duration = 0.8
 left_cover = NodePath("../Cover_Tall_02Left")
 right_cover = NodePath("../Cover_Medium_02Right")
 back_cover = NodePath("../Cover_Tall_01Middle")
@@ -183,6 +192,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4000001, 0, 0.5226846)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.405493, 0, -6)
 active_sides = 1
 cover_name = "Forward (Medium)"
+camera_transition_duration = 1.5
+player_movement_duration = 0.8
 left_cover = NodePath("../Cover_Medium_02Middle")
 back_cover = NodePath("../Cover_Tall_01Right")
 

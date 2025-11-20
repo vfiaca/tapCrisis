@@ -890,5 +890,515 @@ game_manager._handle_tap():
 
 ---
 
-*Last Updated: Session 3 - Shooting System & Gameplay Polish*
-*Next Review: After custom path camera integration*
+## Session 4: Manual Path Creation
+
+### Date: [Session 4]
+
+#### Files Modified
+- `addons/cover_path_tools/plugin.gd` - Simplified path creation with manual target selection
+- `docs/COVER_SETUP_GUIDE.md` - Updated with manual path creation workflow
+- `CLAUDE.md` - Session 4 changelog
+
+#### Key Features Implemented
+
+##### Manual Target Node Selection
+**Purpose:** Give designers full control over path endpoints
+
+**Before:**
+- Auto-detection tried to find target anchors
+- Limited to connecting only to cover anchors
+- Complex logic prone to errors
+
+**After:**
+- Direct node path input fields for each direction/side combination
+- Can connect to ANY Node3D in the scene
+- Simple, predictable behavior
+
+**Benefits:**
+- Connect to any Node3D, not just cover anchors
+- Create asymmetric paths (different entry/exit points)
+- Full control over path endpoints for complex level layouts
+
+**Workflow:**
+1. Select CoverPoint in scene tree
+2. Enter target node path in text field (e.g., `../TargetCover/CameraAnchor_Left`)
+3. Choose direction (forward/back/left/right)
+4. Click "Create" for Camera or Player path
+5. Path created with smart curve defaults
+
+#### Design Decisions
+
+**Manual vs Auto-Detection:**
+- **Decision:** Manual node path entry
+- **Rationale:**
+  - More flexible (connect to anything)
+  - More predictable (no guessing)
+  - Supports complex level layouts
+  - Designer has full control
+
+---
+
+## Session 5: Complete Path System Redesign
+
+### Date: [Session 5]
+
+#### Files Created
+- `addons/path_creator/plugin.gd` - Brand new path creation plugin
+- `addons/path_creator/plugin.cfg` - Plugin configuration
+- `addons/path_creator/README.md` - Plugin documentation
+- `docs/PATHS_GUIDE.md` - Complete path system documentation
+
+#### Files Deleted
+- `addons/cover_path_tools/` - Entire old system scrapped
+
+#### Key Features Implemented
+
+##### Inspector-Based Path Creator
+**Revolutionary Change:** Completely new approach to path creation
+
+**Old System Issues:**
+- Complex auto-detection logic
+- Manual typing of node paths
+- Unclear what it was doing
+- Hard to debug
+
+**New System:**
+- **Node picker workflow**: Select origin → Pick → Select destination → Pick → Create
+- **Inspector panel**: Appears when CoverPoint is selected
+- **Single responsibility**: Create Path3D between two nodes
+- **No auto-detection**: Just creates what you tell it to
+- **Clear visual feedback**: Shows selected nodes
+- **Quick reset**: Clear (X) buttons to reset selections
+
+**Workflow:**
+1. Select CoverPoint in scene tree
+2. Path Creator panel appears in Inspector
+3. Click "Pick" for origin node
+4. Select origin node in scene tree (e.g., CameraAnchor_Left)
+5. Click "Pick" for destination node
+6. Select destination node in scene tree (e.g., other cover's anchor)
+7. Choose direction (forward/back/left/right)
+8. Choose type (Camera or Player)
+9. Click "Create Path"
+10. Path auto-selected - edit curve in 3D viewport
+
+**Integration Features:**
+- **Anchor setup button**: One-click "Setup Cover Anchors" for full cover configuration
+- **Path naming**: Direction/type determines automatic path naming
+- **Smart defaults**: Paths created with sensible curve shapes
+
+#### Design Decisions
+
+**Complete Rewrite Rationale:**
+- Old system too complex
+- Manual path entry error-prone
+- Wanted visual workflow
+- Inspector integration cleaner than separate panel
+
+**Node Picker Approach:**
+- Visual selection beats typing
+- Clear what you're connecting
+- Works with any Node3D
+- Eliminates typos
+
+---
+
+## Session 6: Camera Timing & Transition Fixes
+
+### Date: [Session 6]
+
+#### Files Modified
+- `scripts/core/cover_point.gd` - Added timing export variables, force_linear_transition
+- `scripts/core/camera_controller.gd` - Quaternion rotation, timing system
+- `scripts/core/game_manager.gd` - Camera start delay, timing defaults
+
+#### Key Features Implemented
+
+##### 1. Sentinel Value Pattern for Timing
+**Problem:** Couldn't distinguish "use default" from "user set to 0"
+
+**Solution:** Use -1 as sentinel value
+```gdscript
+# -1 = use default
+# 0+ = explicit value (including zero)
+@export var camera_start_delay: float = -1.0
+@export var camera_transition_duration: float = -1.0
+@export var player_movement_duration: float = -1.0
+```
+
+**Benefits:**
+- Can set explicit zero values
+- Clear indication of "use default"
+- Backwards compatible
+
+##### 2. Camera Start Delay System
+**Feature:** Player moves first, camera follows after delay
+
+**Purpose:**
+- More cinematic transitions
+- Player-first movement feels natural
+- Configurable per cover
+
+**Implementation:**
+```gdscript
+# CoverPoint exports
+@export var camera_start_delay: float = -1.0  # Default: 0.3s
+
+# GameManager applies delay
+var delay = source_cover.camera_start_delay if source_cover.camera_start_delay >= 0 else DEFAULT_CAMERA_START_DELAY
+```
+
+##### 3. Quaternion Rotation Fix
+**Problem:** Camera spinning 360° during transitions
+
+**Root Cause:** Euler angle interpolation choosing longest path
+
+**Solution:** Use Quaternion.slerp() for shortest-path rotation
+```gdscript
+# Before (Euler - could spin):
+rotation = rotation.lerp(target_rotation, t)
+
+# After (Quaternion - shortest path):
+var from_quat = Quaternion(rotation)
+var to_quat = Quaternion(target_rotation)
+rotation = from_quat.slerp(to_quat, t).get_euler()
+```
+
+**Result:** Smooth, predictable camera rotation
+
+##### 4. Force Linear Transition Option
+**Feature:** Override custom paths, use linear camera movement
+
+**Purpose:**
+- Some transitions work better linear
+- Designer control over path usage
+- Per-cover override capability
+
+**Implementation:**
+```gdscript
+@export var force_linear_transition: bool = false
+
+# In camera transition:
+if source_cover.force_linear_transition:
+    camera_path = null  # Ignore custom path
+```
+
+##### 5. Source-Based Timing Design
+**Architecture Decision:** Timing settings apply when LEAVING a cover
+
+**Before:** Mixed - some settings on destination, some on source
+
+**After:** ALL timing comes from source cover
+- camera_start_delay
+- camera_transition_duration
+- player_movement_duration
+- transition_ease_type
+- force_linear_transition
+
+**Benefits:**
+- Configure once per cover
+- Clear ownership
+- No ambiguity about which cover's settings apply
+- Easier to understand and tune
+
+##### 6. Simplified Timing Architecture
+**Change:** Removed timing exports from camera controller
+
+**Before:**
+- Camera had timing constants as exports
+- Confusing where to set timing
+- Redundant configuration
+
+**After:**
+- Camera has internal constants only
+- ALL timing configured on CoverPoint exports
+- Single source of truth
+
+**Result:** Clearer configuration, less confusion
+
+#### Issues Resolved
+
+##### Issue 1: Export Variable Runtime Bug
+**Problem:** `-1` timing values treated as invalid at runtime
+
+**Cause:** Conditions checking `> 0` didn't allow explicit zero
+
+**Fix:** Changed all checks from `> 0` to `>= 0`
+```gdscript
+# Before:
+if camera_start_delay > 0:
+
+# After:
+if camera_start_delay >= 0:
+```
+
+##### Issue 2: Camera Spinning 360°
+**Problem:** Camera rotating the long way around
+
+**Fix:** Quaternion slerp (see above)
+
+##### Issue 3: Timing Reading Wrong Cover
+**Problem:** System using destination cover's timing instead of source
+
+**Fix:** Save source_cover reference BEFORE player state changes
+```gdscript
+var source_cover = player.current_cover  # Save FIRST
+# ... then move player
+player.move_to_cover(next_cover, next_side)
+# ... use source_cover for timing
+```
+
+#### Design Decisions
+
+**Source-Based Timing:**
+- **Decision:** All timing from cover you're LEAVING
+- **Rationale:** Simpler configuration, clear responsibility
+
+**Quaternion Rotation:**
+- **Decision:** Use Quaternion.slerp()
+- **Rationale:** Shortest path, predictable behavior
+
+**Force Linear Option:**
+- **Decision:** Add per-cover override
+- **Rationale:** Not all transitions need curves
+
+---
+
+## Session 7: Animation & State Timing Fixes
+
+### Date: [Session 7]
+
+#### Files Modified
+- `scripts/core/player_controller.gd` - Animation direction, state timing, spawn offset, node paths
+- `scripts/core/game_manager.gd` - Side rotation logic, debug output, timing fixes
+- `scenes/player/player.tscn` - Animation targets changed
+- `CLAUDE.md` - Session 7 documentation
+
+#### Key Features Implemented
+
+##### 1. Animation Direction Fix
+**Problem:** Character stepping in wrong direction
+
+**Root Cause:** Inverted blend_position logic
+```gdscript
+# Before (wrong):
+var blend_position = -1.0 if current_side == "left" else 1.0
+
+# After (correct):
+var blend_position = 1 if current_side == "left" else -1
+```
+
+**Logic:**
+- Left side of cover → step RIGHT (out from left)
+- Right side of cover → step LEFT (out from right)
+
+##### 2. Double-Swipe Bug Fix
+**Problem:** Required two swipes to move between single-sided covers
+
+**Root Cause:** State updated at END of movement, but is_transitioning cleared when camera finished
+
+**Solution:** Update state at START of movement
+```gdscript
+# Move state updates to beginning
+current_state = State.TRANSITIONING
+
+# Save old state for animation
+var old_cover = current_cover
+var old_side = current_side
+
+# Update immediately
+current_cover = target_cover
+current_side = target_side
+
+# Use old_cover for animation logic
+```
+
+**Result:** Input blocked correctly, no race conditions
+
+##### 3. Player Spawn Offset Fix
+**Problem:** Player spawning in stepped-out position
+
+**Solution:** Initialize animation to neutral at startup
+```gdscript
+func _ready():
+    if animation_tree:
+        animation_tree.active = true
+        animation_tree.set("parameters/step/blend_position", 0.0)
+```
+
+##### 4. Raycast Shooting from Behind Cover Fix
+**Problem:** ShootOrigin and ShootRaycast stayed at Player root while Model animated
+
+**Root Cause:** Nodes were siblings of Model, not children
+
+**Solution:** Move raycast nodes to be children of Model
+```gdscript
+# Scene structure changed:
+Player (CharacterBody3D)
+└── Model (Node3D) ← Animations move this
+    ├── ShootOrigin ← Now child of Model
+    └── ShootRaycast ← Now child of Model
+
+# Code updated:
+@onready var shoot_origin: Node3D = $Model/ShootOrigin
+```
+
+**Result:** Raycast fires from correct position when stepped out
+
+##### 5. Animation Target Conflict Fix
+**Problem:** Player frozen in place after animations changed to target Player root
+
+**Root Cause:**
+- Animations moving Player root position
+- Movement system ALSO setting Player root position
+- They fought each other → Player locked
+
+**Solution:** Revert animations to target Model node
+```gdscript
+# Animation tracks changed:
+NodePath(".:position") → NodePath("Model:position")
+NodePath(".:rotation") → NodePath("Model:rotation")
+```
+
+**Architecture Established:**
+```
+Player (CharacterBody3D) ← Stays at cover anchor (movement control)
+└── Model (Node3D) ← Animations move this (visual offset)
+    └── Skeleton3D ← Future character goes here
+        ├── Bone colliders (move with skeleton + Model offset)
+        └── Character mesh
+```
+
+**Benefits for Skeletal Characters:**
+- Player root at logical position (cover anchor)
+- Model offset by animations (step-out)
+- Skeleton inherits Model transform
+- Bone colliders move correctly
+- No conflict between animation and movement
+
+##### 6. Side Rotation Logic Improvement
+**Enhancement:** Only attempt rotation if cover has BOTH sides
+
+**Before:** Tried to rotate even on single-sided covers
+
+**After:**
+```gdscript
+if direction == "left" and player.current_side == "right":
+    if player.current_cover.has_left_side() and player.current_cover.has_right_side():
+        # Only rotate if both sides exist
+```
+
+##### 7. Enhanced Debug Output
+**Added comprehensive logging:**
+- Swipe direction detection
+- Current cover state
+- Side availability checking
+- Transition timing values
+- Force linear transition flags
+
+#### Issues Resolved
+
+##### Issue 1: Reversed Step-Out Animations
+**Fix:** Corrected blend_position logic (line 257)
+
+##### Issue 2: Double-Swipe Movement Bug
+**Fix:** State timing at start, old state preservation
+
+##### Issue 3: Player Spawn Offset
+**Fix:** Animation initialization in _ready()
+
+##### Issue 4: Forward/Backward Movement Broken
+**Fix:** Old state variables for animation logic
+
+##### Issue 5: Timing from Wrong Cover
+**Fix:** Source cover reference saved before state change
+
+##### Issue 6: Camera Pathing Ignored
+**Fix:** Check force_linear_transition on source cover
+
+##### Issue 7: Raycast from Behind Cover
+**Fix:** ShootOrigin/ShootRaycast as children of Model
+
+##### Issue 8: Player Movement Frozen
+**Fix:** Animation targets reverted to Model node
+
+#### Design Decisions
+
+##### State Timing Pattern
+**Decision:** Update state immediately, preserve old state in local variables
+
+**Pattern:**
+```gdscript
+var old_cover = current_cover
+var old_side = current_side
+
+current_cover = target_cover
+current_side = target_side
+
+# Use old_* for animation logic
+```
+
+**Benefits:**
+- Input blocking works correctly
+- Animation transitions work correctly
+- No race conditions
+
+##### Architecture for Skeletal Characters
+**Decision:** Player root = logical position, Model = visual offset
+
+**Structure:**
+- Player (CharacterBody3D) - stays at anchor
+- Model (Node3D) - animations move this
+- Skeleton3D - goes under Model
+- Bone colliders - inherit full transform chain
+
+**Benefits:**
+- Cover system works (Player at anchor)
+- Animations work (Model moves)
+- Bone colliders move correctly
+- No conflicts
+
+#### Technical Improvements
+
+**Animation System:**
+- Direction logic corrected
+- State timing fixed
+- Spawn offset eliminated
+- Node hierarchy optimized for skeletal characters
+
+**State Management:**
+- Immediate state updates prevent race conditions
+- Old state preserved for transitions
+- Clear ownership of timing (source cover)
+
+**Debug Systems:**
+- Comprehensive logging
+- State tracking
+- Timing verification
+
+#### Testing Notes
+
+**Test Movement:**
+1. Swipe between covers
+2. Verify no double-swipe needed
+3. Check smooth transitions
+
+**Test Shooting:**
+1. Tap to shoot
+2. Verify raycast from correct position (stepped out)
+3. Check debug line originates at character
+
+**Test Animation:**
+1. Verify step direction matches cover side
+2. Check player spawns in neutral position
+3. Confirm smooth step-in/step-out
+
+**Test State:**
+1. Rapid swipe input should be blocked during transitions
+2. Movement should complete before accepting new input
+3. Debug logs show correct current_cover during transitions
+
+---
+
+*Last Updated: Session 7 - Animation & State Timing Fixes*
+*Next Review: After character model integration*

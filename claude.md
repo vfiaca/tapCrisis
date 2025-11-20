@@ -684,6 +684,10 @@ await player.move_to_cover(next_cover, side, player_path)
 - **Updated both movement functions**: Applied state timing fix to both `move_to_cover()` and `rotate_to_side()`
 - **Side rotation logic improvement**: Only attempt rotation when current cover has BOTH sides active
 - **Added debug output**: Swipe direction handling now logs current cover state for troubleshooting
+- **Fixed raycast shooting from behind cover**: Moved ShootOrigin and ShootRaycast nodes to be children of Model node instead of Player root, so they move with step-out animations
+- **Updated node paths**: Changed `$ShootOrigin` to `$Model/ShootOrigin` in player_controller.gd:47
+- **Fixed animation target conflict**: Reverted animations to target `Model:position` and `Model:rotation` instead of Player root, preventing conflict between animation and movement systems
+- **Established architecture for skeletal characters**: Player root stays at cover anchor (movement control), Model node animated (visual/collision offset), allowing skeleton with per-bone colliders to inherit Model's transform
 
 ---
 
